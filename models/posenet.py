@@ -1,6 +1,5 @@
 import tensorflow as tf
 import tf_util
-from pointnet_util import pointnet_sa_module, pointnet_fp_module
 
 # batch*n
 def normalize_vector(v):
