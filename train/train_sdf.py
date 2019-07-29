@@ -20,7 +20,6 @@ import output_utils
 import create_file_lst
 
 slim = tf.contrib.slim
-VV=False
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', type=str, default='1', help='GPU to use [default: GPU 0]')
@@ -30,7 +29,6 @@ parser.add_argument('--num_points', type=int, default=1, help='Point Number [def
 parser.add_argument("--beta1", type=float, dest="beta1",
                     default=0.5, help="beta1 of adams")
 parser.add_argument('--num_sample_points', type=int, default=256, help='Sample Point Number [default: 2048]')
-# parser.add_argument('--sdf_points_num', type=int, default=32, help='Sample Point Number [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=200, help='Epoch to run [default: 201]')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
 parser.add_argument('--img_h', type=int, default=137, help='Image Height')
@@ -43,16 +41,12 @@ parser.add_argument('--optimizer', default='adam', help='adam or momentum [defau
 parser.add_argument('--restore_model', default='', help='restore_model') #checkpoint/sdf_2d3d_sdfbasic2_nowd
 parser.add_argument('--restore_modelpn', default='', help='restore_model')#checkpoint/sdf_3dencoder_sdfbasic2/latest.ckpt
 parser.add_argument('--restore_modelcnn', default='', help='restore_model')#../../models/CNN/pretrained_model/vgg_16.ckpt
-if VV:
-    parser.add_argument('--train_lst_dir', default='/media/ssd/projects/Deformation/Sources/DF/shapenet/filelists/', help='train mesh data list')
-    parser.add_argument('--valid_lst_dir', default='/media/ssd/projects/Deformation/Sources/DF/shapenet/filelists/', help='test mesh data list')
-else:
-    parser.add_argument('--train_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='train mesh data list')
-    parser.add_argument('--valid_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='test mesh data list')
+
+parser.add_argument('--train_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='train mesh data list')
+parser.add_argument('--valid_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='test mesh data list')
 parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate for lr decay [default: 0.7]')
-parser.add_argument('--mask_tp', type=str, default="")
-parser.add_argument('--mask_rt', type=int, default=40000)
+parser.add_argument('--mask_weight', type=float, default=4.0)
 parser.add_argument('--threedcnn', action='store_true')
 parser.add_argument('--volimp', action='store_true')
 parser.add_argument('--img_feat', action='store_true')
@@ -68,6 +62,7 @@ parser.add_argument('--tanh', action='store_true')
 parser.add_argument('--cam_est', action='store_true')
 parser.add_argument('--cat_limit', type=int, default=168000, help="balance each category, 1500 * 24 = 36000")
 parser.add_argument('--multi_view', action='store_true')
+parser.add_argument('--backcolorwhite', action='store_true')
 
 FLAGS = parser.parse_args()
 print(FLAGS)
@@ -135,39 +130,22 @@ for cat_id in cat_ids:
                 cats_limit[cat_id]+=1
                 TRAIN_LISTINFO += [(cat_id, line.strip(), render)]
 
-if VV:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_full'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1'}
-    else:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_simp'}
-else:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
+
+if FLAGS.threedcnn:
+    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
+            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2'}
+elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
+            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
+    if FLAGS.cam_est:
+        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred',
                 'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
-        if FLAGS.cam_est:
-            info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred',
-                    'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
-    else:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_neg/simp_256_expr_1.2_bw_0.1'}
+else:
+    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
+            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_neg/simp_256_expr_1.2_bw_0.1'}
 print(info)
 
 TRAIN_DATASET = data_sdf_h5_queue.Pt_sdf_img(FLAGS, listinfo=TRAIN_LISTINFO, info=info, cats_limit=cats_limit)
-
-# VALID_DATASET = []
-# with open(VALID_LST, 'r') as f:
-#     lines = f.read().splitlines()
-#     for line in lines:
-#         for render in range(24):
-#             VALID_DATASET += [(line.strip(), '%02d' % render)]
 
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')
@@ -261,15 +239,13 @@ def train():
             # Get model and loss
 
             end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, bn=False, FLAGS=FLAGS)
-            loss, end_points = model.get_loss(end_points,
-                sdf_weight=SDF_WEIGHT, mask_tp=FLAGS.mask_tp, mask_rt = FLAGS.mask_rt,
+            loss, end_points = model.get_loss(end_points, sdf_weight=SDF_WEIGHT, mask_weight = FLAGS.mask_weight,
                                               num_sample_points=FLAGS.num_sample_points, FLAGS=FLAGS)
             # tf.summary.scalar('loss', loss)
 
             print("--- Get training operator")
             # Get training operator
             learning_rate = get_learning_rate(batch)
-            # tf.summary.scalar('learning_rate', learning_rate)
             if OPTIMIZER == 'momentum':
                 optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=MOMENTUM)
             elif OPTIMIZER == 'adam':
@@ -283,14 +259,9 @@ def train():
             config.allow_soft_placement = True
             config.log_device_placement = False
             sess = tf.Session(config=config)
-            # sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
-            # Add summary writers
-            # merged = tf.summary.merge_all()
-            # train_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'train'), sess.graph)
             merged = None
             train_writer = None
-            test_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'test'), sess.graph)
 
             ##### all
             update_variables = [x for x in tf.get_collection_ref(tf.GraphKeys.GLOBAL_VARIABLES)]
@@ -346,13 +317,7 @@ def train():
                 log_string('**** EPOCH %03d ****' % (epoch))
                 sys.stdout.flush()
 
-                # eval_one_epoch(sess, ops, test_writer)
                 avg_accuracy = train_one_epoch(sess, ops, train_writer, saver)
-                # epoch_loss = eval_one_epoch(sess, ops, test_writer)
-                # if epoch_loss < best_loss:
-                #     best_loss = epoch_loss
-                #     save_path = saver.save(sess, os.path.join(LOG_DIR, "best_model_epoch_%03d.ckpt"%(epoch)))
-                #     log_string("Model saved in file: %s" % save_path)
 
                 # Save the variables to disk.
                 if avg_accuracy > best_acc:
@@ -388,8 +353,6 @@ def train_one_epoch(sess, ops, train_writer, saver):
 
     num_batches = int(len(TRAIN_DATASET) / BATCH_SIZE)
 
-    # random.shuffle(TRAIN_DATASET.order)
-
     print('num_batches', num_batches)
 
     log_string(str(datetime.now()))
@@ -414,9 +377,6 @@ def train_one_epoch(sess, ops, train_writer, saver):
                      ops['input_pls']['sdf_params']: batch_data['sdf_params'],
                      ops['input_pls']['imgs']: batch_data['img'],
                      ops['input_pls']['trans_mat']: batch_data['trans_mat']}
-
-        # output_list = [ops['train_op'], ops['merged'], ops['step'], ops['lr'], ops['loss'], ops['end_points']['pred_sdf'], ops['end_points']['ref_sdf'],
-        #                ops['end_points']['pred_sdf'], ops['end_points']['ref_img']]
         output_list = [ops['train_op'], ops['step'], ops['lr'], ops['loss'], ops['end_points']['pred_sdf'],
                        ops['end_points']['ref_sdf'], ops['end_points']['sample_img_points'],
                        ops['end_points']['pred_sdf'], ops['end_points']['ref_img']]
@@ -432,7 +392,6 @@ def train_one_epoch(sess, ops, train_writer, saver):
 #   
         pred_sdf_val /= SDF_WEIGHT
 
-        # train_writer.add_summary(summary, step)
 
         for il, lossname in enumerate(losses.keys()):
             if lossname == "accuracy":
@@ -440,10 +399,6 @@ def train_one_epoch(sess, ops, train_writer, saver):
             losses[lossname] += outputs[len(output_list)+il]
 
         loss_all += losses['overall_loss']
-        # save_freq = 1000
-        # if (batch_idx + 1) % save_freq == 0:
-        #     save_path = saver.save(sess, os.path.join(LOG_DIR, "latest.ckpt"))
-        #     log_string("Model saved in file: %s" %output_list save_path)
 
         verbose_freq = 20.
         if (batch_idx + 1) % verbose_freq == 0:
@@ -459,24 +414,16 @@ def train_one_epoch(sess, ops, train_writer, saver):
                     y = int(samplept_img[j, 1])
                     cv2.circle(saveimg, (x, y), 3, (0, 0, 255, 255), -1)
                 cv2.imwrite(os.path.join(RESULT_PATH, '%d_ref_img_resized.png' % batch_idx), saveimg)
-
                 np.savetxt(os.path.join(RESULT_PATH, '%d_sdf_pred.txt' % batch_idx), np.concatenate((batch_data['sdf_pt_rot'][bid,:,:], np.expand_dims(pred_sdf_val[bid,:,0],1)), axis=1))
                 np.savetxt(os.path.join(RESULT_PATH, '%d_sdf_ref.txt' % batch_idx), np.concatenate((batch_data['sdf_pt_rot'][bid,:,:], np.expand_dims(ref_sdf_val[bid,:,0],1)), axis=1))
                 ref_sdf_display = batch_data['sdf_val'][bid,:,0]
                 vmin = np.min(ref_sdf_display)
                 vmax = np.max(ref_sdf_display)
                 ref_sdf_display = (ref_sdf_display - vmin) / (vmax - vmin)
-
                 pred_sdf_display = pred_sdf_val[bid,:,0]
                 pred_sdf_display = (pred_sdf_display - vmin) / (vmax - vmin)
-
                 output_utils.output_scale_point_cloud(batch_data['sdf_pt_rot'][bid,:,:], pred_sdf_display, os.path.join(RESULT_PATH, '%d_pred.obj' % batch_idx))
                 output_utils.output_scale_point_cloud(batch_data['sdf_pt_rot'][bid,:,:], ref_sdf_display, os.path.join(RESULT_PATH, '%d_gt.obj' % batch_idx))
-                # if FLAGS.alpha:
-                #     cv2.imwrite(os.path.join(RESULT_PATH, '%d_ref_img_resized.png' % batch_idx), (ref_img_val[bid,:,:,:] * 255).astype(np.uint8))
-                # else:
-                #     cv2.imwrite(os.path.join(RESULT_PATH, '%d_ref_img_resized.png' % batch_idx), (ref_img_val[bid,:,:,:] * 255).astype(np.uint8))
-
             outstr = ' -- %03d / %03d -- ' % (batch_idx+1, num_batches)
             for lossname in losses.keys():
                 outstr += '%s: %f, ' % (lossname, losses[lossname] / verbose_freq)
@@ -489,75 +436,6 @@ def train_one_epoch(sess, ops, train_writer, saver):
             log_string(outstr)
     print("avg accuracy:", accuracy_epoch / num_batches)
     return accuracy_epoch / num_batches
-#
-# def eval_one_epoch(sess, ops, test_writer):
-#     """ ops: dict mapping from string to tf ops """
-#
-#     is_training = False
-#
-#     # Shuffle train samples
-#     num_batches = int(len(VALID_DATASET)/BATCH_SIZE)
-#
-#     print('num_batches', num_batches)
-#     print('len(TRAIN_DATASET_MESH)', len(VALID_DATASET))
-#
-#     feed_dict = {ops['is_training_pl']: is_training,}
-#     loss_all = 0
-#     pc_loss_all = 0
-#
-#     h5_folder = '/media/hdd2/data/ShapeNet/ShapeNetCore.v2.h5/03001627'
-#     img_folder = '/media/hdd2/data/ShapeNet/ShapeNetRendering/03001627'
-#     ref_pc = np.zeros([BATCH_SIZE, 4096, 3])
-#     imgs = np.zeros([BATCH_SIZE, IMG_SIZE, IMG_SIZE, 3]).astype(np.float32)
-#
-#     for batch_idx in range(num_batches):
-#
-#         start_idx = batch_idx * BATCH_SIZE
-#
-#         for ib in range(BATCH_SIZE):
-#
-#             h5_fn = os.path.join(h5_folder, VALID_DATASET[start_idx + ib][0]+'.h5')
-#             h5_f = h5py.File(h5_fn)
-#             pc = pc_normalize(h5_f['surfacebinvoxsparse'][:].T)
-#             choice = np.random.randint(pc.shape[0], size=NUM_REF_POINTS)
-#             pc = pc[choice, :]
-#             ref_pc[ib,:,:] = pc
-#
-#             img_fn = os.path.join(img_folder, VALID_DATASET[start_idx + ib][0], 'rendering', VALID_DATASET[start_idx + ib][1]+'.png')
-#             imgs[ib,:,:,:] = cv2.imread(img_fn, cv2.IMREAD_UNCHANGED)[:,:,:3].astype(np.float32) / 255.
-#
-#
-#         feed_dict = {ops['is_training_pl']: is_training,
-#                      ops['ref_mesh']['pc']: ref_pc,
-#                      ops['ref_mesh']['imgs']: imgs}
-#
-#         output_list = [ops['train_op'], ops['merged'], ops['step'], ops['loss'],
-#                        ops['end_points']['ref_pc'], ops['end_points']['reconst_pc'], ops['end_points']['ref_img']]
-#         # src_batch_data, ref_batch_data = VALID_DATASET.get_batch(start_idx)
-#
-#         # feed_dict = {ops['is_training_pl']: is_training,}
-#
-#         loss_val, \
-#         cf_loss_val, \
-#         ref_pc_val, \
-#         pred_pc_val, ref_img_val = sess.run(\
-#         [ops['end_points']['losses']['overall_loss'],
-#          ops['end_points']['losses']['recon_cf_loss'],
-#          ops['end_points']['ref_pc'],
-#          ops['end_points']['reconst_pc'], ops['end_points']['ref_img']], feed_dict=feed_dict)
-#
-#         loss_all += loss_val
-#         pc_loss_all += cf_loss_val
-#         bid = 0
-#
-#         np.savetxt(os.path.join(VALID_RESULT_PATH, '%s_%s_pc_gt.xyz' % (VALID_DATASET[start_idx + 0][0], VALID_DATASET[start_idx + 0][1])), ref_pc_val[0,:,:])
-#         np.savetxt(os.path.join(VALID_RESULT_PATH, '%s_%s_pc_pred.xyz' % (VALID_DATASET[start_idx + 0][0], VALID_DATASET[start_idx + 0][1])), pred_pc_val[0,:,:])
-#         cv2.imwrite(os.path.join(VALID_RESULT_PATH, '%s_%s_ref_img_resized.png' % (VALID_DATASET[start_idx + 0][0], VALID_DATASET[start_idx + 0][1])), (ref_img_val[0,:,:,:] * 255).astype(np.uint8))
-#
-#
-#     log_string("validation loss: %f, cf loss: %f" % (loss_all/num_batches, pc_loss_all/num_batches))
-#
-#     return loss_all/num_batches
 
 if __name__ == "__main__":
     log_string('pid: %s'%(str(os.getpid())))

@@ -91,15 +91,6 @@ def get_rotate_matrix(rotation_angle1):
         [0, 0,  -1, 0],
         [0, 0,  0, 1]
     ])
-    # y,z swap = x rotate -90, scale y -1
-    # new_pts0[:, 1] = new_pts[:, 2]
-    # new_pts0[:, 2] = new_pts[:, 1]
-    #
-    # x y swap + negative = z rotate -90, scale y -1
-    # new_pts0[:, 0] = - new_pts0[:, 1] = - new_pts[:, 2]
-    # new_pts0[:, 1] = - new_pts[:, 0]
-
-    # return np.linalg.multi_dot([rotation_matrix_z, rotation_matrix_y, rotation_matrix_y, scale_y_neg, rotation_matrix_z, scale_y_neg, rotation_matrix_x])
     return np.linalg.multi_dot([neg, rotation_matrix_z, rotation_matrix_z, scale_y_neg, rotation_matrix_x])
 
 
@@ -251,8 +242,6 @@ def get_el(el):
 def get_inl(inl):
     cos = np.cos(inl)
     sin = np.sin(inl)
-    # zeros = np.zeros_like(inl)
-    # ones = np.ones_like(inl)
     mat = np.asarray([cos, -1.0 * sin, 0.0, sin, cos, 0.0, 0.0, 0.0, 1.0], dtype=np.float32)
     mat = np.reshape(mat, [3, 3])
     return mat
@@ -273,7 +262,6 @@ def get_points(obj_fl):
     for mesh in mesh_lst:
         choice = np.random.randint(mesh.vertices.shape[0], size=1000)
         sample_pc = np.concatenate((sample_pc, mesh.vertices[choice,...]), axis=0) #[choice,...]
-    # color = [[255,0,0], [0,255,0], [0,0,255], [255, 0, 255]]
     color = 255*np.ones_like(sample_pc,dtype=np.uint8)
     color[:,0] = 0
     color[:,1] = 0
@@ -298,9 +286,6 @@ def test_img_h5(img_h5_fl, num, march_obj_fl):
     for j in range(pc_xy.shape[0]):
         y = int(pc_xy[j, 1])
         x = int(pc_xy[j, 0])
-        # print (y,x)
-        # print(img_arr[y, x, :])
-        # print(tuple([int(x) for x in colors[j]]))
         cv2.circle(img_arr, (x, y), 3, tuple([int(x) for x in colors[j]]), -1)
     rot_pc = np.dot(new_pts, obj_rot_mat)
     np.savetxt(os.path.join("send/", "{}_{}_{}.txt".format("03001627", "184b4797cea77beb5ca1c42bb8ac17a", str(num))), rot_pc)
@@ -318,15 +303,3 @@ if __name__ == "__main__":
                    raw_dirs["renderedh5_dir"],
                    lst_dir, cats,
                    raw_dirs["sdf_dir"]+"256_expr_1.2_bw_0.1/")
-
-
-    # test_img_h5("/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1/03001627/184b4797cea77beb5ca1c42bb8ac17a/05.h5", 5,
-    #             "/ssd1/datasets/ShapeNet/march_cube_objs_v1/03001627/184b4797cea77beb5ca1c42bb8ac17a/isosurf.obj")
-
-    # gen_obj_img_h5("/ssd1/datasets/ShapeNet/ShapeNetRendering",
-    #    "send/03001627", "/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1/", "03001627", "184b4797cea77beb5ca1c42bb8ac17a")
-    #
-    # test_img_h5("send/03001627/184b4797cea77beb5ca1c42bb8ac17a/00.h5",0,
-    #                 "/ssd1/datasets/ShapeNet/march_cube_objs_v1/03001627/184b4797cea77beb5ca1c42bb8ac17a/isosurf.obj")
-    # test_img_h5("send/03001627/184b4797cea77beb5ca1c42bb8ac17a/01.h5",1,
-    #             "/ssd1/datasets/ShapeNet/march_cube_objs_v1/03001627/184b4797cea77beb5ca1c42bb8ac17a/isosurf.obj")
