@@ -229,7 +229,7 @@ def sample_save_pred_pnt(cat_id, cat_nm, pred_dir, test_lst_f):
                 np.savetxt(savefn, verts_batch[i, ...], delimiter=',')
                 print("saved gt pnt of {} at {}".format(obj_id, savefn))
 
-def cal_f_score_all_cat(cats, pred_dir, gt_dir, test_lst_dir,threshold_lst):
+def cal_f_score_all_cat(cats, pred_dir, gt_dir, test_lst_dir,threshold_lst, side_len):
     precision_lst = []
     recall_lst = []
     cnt_lst = []
@@ -237,7 +237,7 @@ def cal_f_score_all_cat(cats, pred_dir, gt_dir, test_lst_dir,threshold_lst):
         pred_dir_cat = os.path.join(pred_dir, cat_id)
         gt_dir_cat = os.path.join(gt_dir, cat_id)
         test_lst_f = os.path.join(test_lst_dir, cat_id + "_test.lst")
-        thresholds = np.asarray(threshold_lst, dtype=np.float32) * 0.01 * 2
+        thresholds = np.asarray(threshold_lst, dtype=np.float32) * 0.01 * side_len
         precision_avg, recall_avg, cnt \
             = f_score_cat(cat_id, cat_nm, pred_dir_cat, gt_dir_cat, test_lst_f, thresholds)
         precision_lst.append(precision_avg)
@@ -246,10 +246,10 @@ def cal_f_score_all_cat(cats, pred_dir, gt_dir, test_lst_dir,threshold_lst):
         print("{}, {}, precision_avg {}, recal_avg{}, count {}"
               .format(cat_nm, cat_id, precision_avg, recall_avg, cnt))
     print("done!")
-    precision = np.asarray(precision_lst)
+    precision = np.asarray(precision_lst) # 13 * 5
     recall = np.asarray(recall_lst)
-    pre_w_avg = np.average(precision, axis=1, weights=cnt_lst)
-    rec_w_avg = np.average(recall, axis=1, weights=cnt_lst)
+    pre_w_avg = np.average(precision, axis=0, weights=cnt_lst)
+    rec_w_avg = np.average(recall, axis=0, weights=cnt_lst)
     f_score = 2 * (pre_w_avg * rec_w_avg) / (pre_w_avg + rec_w_avg)
     print("pre_w_avg {}, rec_w_avg {}, f_score {}".format(pre_w_avg, rec_w_avg, f_score))
 
@@ -264,9 +264,8 @@ def f_score_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f, thresholds):
             sess = tf.Session(config=config)
             sampled_pc = tf.placeholder(tf.float32, shape=(FLAGS.batch_size + 1, FLAGS.num_sample_points, 3))
             #
-            thresholds_pl = tf.placeholder(tf.float32, shape=(thresholds.shape[0],1))
-            dists_forward_sqrt, dists_backward_sqrt, pre_sum, rec_sum \
-                = get_points_distance(sampled_pc, thresholds.shape[0], thresholds_pl)
+            dists_forward_sqrt, dists_backward_sqrt \
+                = get_points_distance(sampled_pc)
             count = 0
             precision_sum = 0
             recall_sum = 0
@@ -274,31 +273,39 @@ def f_score_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f, thresholds):
                 test_objs = f.readlines()
                 for obj_id in test_objs:
                     obj_id = obj_id.rstrip('\r\n')
-                    gt_pnt_path = os.path.join(gt_dir, obj_id, "pnt_{}.txt".format(FLAGS.num_sample_points))
-                    # npnts, 3
-                    gt_pnts = np.loadtxt(gt_pnt_path,dtype=float, delimiter=',')
-                    pred_path_lst = pred_dict[obj_id]
-                    verts_batch = np.zeros((FLAGS.view_num + 1, FLAGS.num_sample_points, 3), dtype=np.float32)
-                    verts_batch[0, ...] = gt_pnts
-                    for i in range(len(pred_path_lst)):
-                        pred_mesh_fl = pred_path_lst[i]
-                        view_id = pred_mesh_fl[-6:-4]
-                        pred_pnt_dir = os.path.join(os.path.dirname(pred_dir),
-                                               "pnt_{}_{}".format(FLAGS.num_sample_points, cat_id))
-                        pred_pnt_path = os.path.join(pred_pnt_dir, "pnt_{}_{}.txt".format(obj_id, view_id))
-                        pred_pnts = np.loadtxt(pred_pnt_path,dtype=float, delimiter=',')
-                        verts_batch[i + 1, ...] = pred_pnts
-                    if FLAGS.batch_size == FLAGS.view_num:
-                        feed_dict = {sampled_pc: verts_batch,
-                                     thresholds_pl: thresholds}
-                        # view * npnt
-                        dists_forward_sqrt_val, dists_backward_sqrt_val, \
-                        pre_sum_val, rec_sum_val \
-                            = sess.run([dists_forward_sqrt, dists_backward_sqrt,
-                                pre_sum,rec_sum], feed_dict=feed_dict)
+                    pred_pnt_dir = os.path.join(os.path.dirname(pred_dir),
+                        "pnt_{}_{}".format(FLAGS.num_sample_points, cat_id))
+                    forfl = os.path.join(pred_pnt_dir, "for_dist_{}.txt".format(obj_id))
+                    backfl = os.path.join(pred_pnt_dir, "bac_dist_{}.txt".format(obj_id))
+                    if not os.path.exists(forfl):
+                        gt_pnt_path = os.path.join(gt_dir, obj_id, "pnt_{}.txt".format(FLAGS.num_sample_points))
+                        # npnts, 3
+                        gt_pnts = np.loadtxt(gt_pnt_path,dtype=float, delimiter=',')
+                        pred_path_lst = pred_dict[obj_id]
+                        verts_batch = np.zeros((FLAGS.view_num + 1, FLAGS.num_sample_points, 3), dtype=np.float32)
+                        verts_batch[0, ...] = gt_pnts
+                        for i in range(len(pred_path_lst)):
+                            pred_mesh_fl = pred_path_lst[i]
+                            view_id = pred_mesh_fl[-6:-4]
+                            pred_pnt_path = os.path.join(pred_pnt_dir, "pnt_{}_{}.txt".format(obj_id, view_id))
+                            pred_pnts = np.loadtxt(pred_pnt_path,dtype=float, delimiter=',')
+                            verts_batch[i + 1, ...] = pred_pnts
+                        if FLAGS.batch_size == FLAGS.view_num:
+                            feed_dict = {sampled_pc: verts_batch}
+                            # view * npnt
+                            dists_forward_sqrt_val, dists_backward_sqrt_val\
+                                = sess.run([dists_forward_sqrt, dists_backward_sqrt], feed_dict=feed_dict)
+                        else:
+                            raise NotImplementedError
+                        np.savetxt(forfl, dists_forward_sqrt_val)
+                        np.savetxt(backfl, dists_backward_sqrt_val)
                     else:
-                        raise NotImplementedError
-
+                        dists_forward_sqrt_val = np.loadtxt(forfl)
+                        dists_backward_sqrt_val = np.loadtxt(backfl)
+                    dists_forward_sqrt_val = np.tile(dists_forward_sqrt_val, [thresholds.shape[0], 1])
+                    dists_backward_sqrt_val = np.tile(dists_backward_sqrt_val, [thresholds.shape[0], 1])
+                    pre_sum_val = np.sum(np.less(dists_forward_sqrt_val, thresholds), axis=1)
+                    rec_sum_val = np.sum(np.less(dists_backward_sqrt_val, thresholds), axis=1)
                     precision = pre_sum_val / (dists_forward_sqrt_val.shape[1])
                     recall = rec_sum_val / (dists_backward_sqrt_val.shape[1])
                     print("cat_id {}, obj_id {}: pre_sum {}, rec_sum {}, precision {}, recall {}"
@@ -308,7 +315,7 @@ def f_score_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f, thresholds):
                     count += 1
     return precision_sum/count, recall_sum/count, count
 
-def get_points_distance(sampled_pc, thresholds_num, thresholds):
+def get_points_distance(sampled_pc):
     src_pc = tf.tile(tf.expand_dims(sampled_pc[0, :, :], axis=0), (FLAGS.batch_size, 1, 1))
     if sampled_pc.get_shape().as_list()[0] == 2:
         pred = tf.expand_dims(sampled_pc[1, :, :], axis=0)
@@ -319,16 +326,9 @@ def get_points_distance(sampled_pc, thresholds_num, thresholds):
     dists_forward, _, dists_backward, _ = tf_nndistance.nn_distance(pred, src_pc)
     dists_forward_sqrt = tf.math.sqrt(dists_forward)
     dists_backward_sqrt = tf.math.sqrt(dists_backward)
-    dists_forward_sqrt = tf.reshape(dists_forward_sqrt, [1,-1])
-    dists_backward_sqrt = tf.reshape(dists_backward_sqrt, [1,-1])
-
-    dists_forward_sqrt_val = tf.tile(dists_forward_sqrt, [thresholds_num, 1])
-    dists_backward_sqrt_val = tf.tile(dists_backward_sqrt, [thresholds_num, 1])
-    pre_sum = tf.reduce_sum(tf.cast(
-        tf.less(dists_forward_sqrt_val, thresholds), tf.float32), axis=1)
-    rec_sum = tf.reduce_sum(tf.cast(
-        tf.less(dists_backward_sqrt_val, thresholds), tf.float32), axis=1)
-    return dists_forward_sqrt, dists_backward_sqrt, pre_sum, rec_sum
+    dists_forward_sqrt = tf.reshape(dists_forward_sqrt, [-1])
+    dists_backward_sqrt = tf.reshape(dists_backward_sqrt, [-1])
+    return dists_forward_sqrt, dists_backward_sqrt
 
 def cd_emd_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f):
     pred_dict = build_file_dict(pred_dir)
@@ -504,7 +504,7 @@ if __name__ == "__main__":
 
     ## calculate distance
     cal_f_score_all_cat(cats, FLAGS.cal_dir, info["gt_marching_cube"],
-        FLAGS.test_lst_dir, [[0.5], [1], [2], [5], [10], [20]])
+        FLAGS.test_lst_dir, [[0.5], [1], [2], [5], [10], [20]], 2.0)
 
 # nohup python -u test/test_cd_emd.py --gpu 0 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt.log &
 # nohup python -u test/test_cd_emd.py --gpu 1 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt.log &

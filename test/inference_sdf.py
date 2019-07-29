@@ -60,6 +60,8 @@ parser.add_argument('--augcolorfore', action='store_true')
 parser.add_argument('--augcolorback', action='store_true')
 parser.add_argument('--backcolorwhite', action='store_true')
 
+parser.add_argument('--two_model', action='store_true')
+
 FLAGS = parser.parse_args()
 print('pid: %s'%(str(os.getpid())))
 print(FLAGS)
