@@ -202,6 +202,8 @@ def get_model(ref_dict, num_point, is_training, bn=False, bn_decay=None, img_siz
                                                                                       bn, bn_decay, wd=wd)
 
                 pred_sdf = pred_sdf_value_global + pred_sdf_value_local
+                end_points["pred_sdf_value_global"] = pred_sdf_value_global
+                end_points["pred_sdf_value_local"] = pred_sdf_value_local
         else:
             sample_img_points = tf.zeros((batch_size, FLAGS.num_sample_points, 2), dtype=tf.float32)
             if not FLAGS.multi_view:
@@ -214,6 +216,7 @@ def get_model(ref_dict, num_point, is_training, bn=False, bn_decay=None, img_siz
     end_points["sample_img_points"] = sample_img_points
     end_points["ref_feats_embedding_cnn"] = ref_feats_embedding_cnn
     end_points["point_img_feat"] = point_img_feat
+
     return end_points
 
 def get_decoder(num_point, input_pls, feature_pls, bn=False, bn_decay=None,wd=None):

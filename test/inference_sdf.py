@@ -60,7 +60,7 @@ parser.add_argument('--augcolorfore', action='store_true')
 parser.add_argument('--augcolorback', action='store_true')
 parser.add_argument('--backcolorwhite', action='store_true')
 
-parser.add_argument('--two_model', action='store_true')
+parser.add_argument('--two_stream_output', action='store_true')
 
 FLAGS = parser.parse_args()
 print('pid: %s'%(str(os.getpid())))
@@ -275,7 +275,9 @@ def test_one_epoch(sess, ops):
                     batch_points = np.concatenate((batch_points, all_pts), axis=1)
 
             pred_sdf_val_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
-
+            if FLAGS.two_stream_output:
+                pred_sdf_val_g_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 1))
+                pred_sdf_val_l_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 1))
             for sp in range(SPLIT_SIZE):
                 if FLAGS.threedcnn:
                     feed_dict = {ops['is_training_pl']: is_training,
@@ -286,11 +288,13 @@ def test_one_epoch(sess, ops):
                                  ops['input_pls']['sample_pc_rot']: batch_points[sp,...].reshape(BATCH_SIZE, -1, 3),
                                  ops['input_pls']['imgs']: batch_data['img'],
                                  ops['input_pls']['trans_mat']: batch_data['trans_mat']}
-
-                output_list = [ops['end_points']['pred_sdf'], ops['end_points']['ref_img'],
-                               ops['end_points']['sample_img_points']]
-                pred_sdf_val, ref_img_val, sample_img_points_val = sess.run(output_list, feed_dict=feed_dict)
-                pred_sdf_val_all[sp,:,:,:] = pred_sdf_val
+                if FLAGS.two_stream_output:
+                    
+                else:
+                    output_list = [ops['end_points']['pred_sdf'], ops['end_points']['ref_img'],
+                                   ops['end_points']['sample_img_points']]
+                    pred_sdf_val, ref_img_val, sample_img_points_val = sess.run(output_list, feed_dict=feed_dict)
+            pred_sdf_val_all[sp,:,:,:] = pred_sdf_val
             pred_sdf_val_all = np.swapaxes(pred_sdf_val_all,0,1) # B, S, NUM SAMPLE, 1 or 2
             pred_sdf_val_all = pred_sdf_val_all.reshape((BATCH_SIZE,-1,2 if FLAGS.binary else 1))[:, :TOTAL_POINTS, :]
             if FLAGS.binary:
