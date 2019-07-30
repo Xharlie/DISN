@@ -8,7 +8,7 @@ import os
 import sys
 import h5py
 import struct
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.append(BASE_DIR) # model
 sys.path.append(os.path.join(BASE_DIR, 'models'))
 sys.path.append(os.path.join(BASE_DIR, 'data'))
@@ -32,7 +32,6 @@ parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate fo
 parser.add_argument('--num_classes', type=int, default=1024, help='vgg dim')
 parser.add_argument('--num_points', type=int, default=1, help='Point Number [default: 2048]')
 parser.add_argument('--sdf_res', type=int, default=64, help='sdf grid')
-parser.add_argument('--mask_tp', type=str, default="neg_two_sides")
 parser.add_argument('--mask_rt', type=int, default=40000)
 parser.add_argument('--alpha', action='store_true')
 parser.add_argument('--rot', action='store_true')
@@ -46,7 +45,7 @@ parser.add_argument('--log_dir', default='checkpoint/exp_200', help='Log dir [de
 parser.add_argument('--test_lst_dir', default='', help='test mesh data list')
 parser.add_argument('--iso', type=float, default=0.0, help='iso value')
 parser.add_argument('--threedcnn', action='store_true')
-parser.add_argument('--img_feat', action='store_true')
+parser.add_argument('--img_feat_onestream', action='store_true')
 parser.add_argument('--img_feat_far', action='store_true')
 parser.add_argument('--img_feat_twostream', action='store_true')
 parser.add_argument('--category', default="all", help='Which single class to train on [default: None]')
@@ -61,6 +60,7 @@ parser.add_argument('--augcolorback', action='store_true')
 parser.add_argument('--backcolorwhite', action='store_true')
 
 parser.add_argument('--two_stream_output', action='store_true')
+parser.add_argument('--crophole', type=float, default=0.0, help='crophole value')
 
 FLAGS = parser.parse_args()
 print('pid: %s'%(str(os.getpid())))
@@ -91,11 +91,26 @@ RESULT_PATH = os.path.join(LOG_DIR, 'test_results_allpts')
 if FLAGS.cam_est:
     RESULT_OBJ_PATH = os.path.join(LOG_DIR, 'test_objs', "camest_"
                                    + str(RESOLUTION) + "_" + str(FLAGS.iso))
-    print("RESULT_OBJ_PATH: ",RESULT_OBJ_PATH)
 else:
     RESULT_OBJ_PATH = os.path.join(LOG_DIR, 'test_objs', str(RESOLUTION) + "_" + str(FLAGS.iso))
+if FLAGS.crophole > 0:
+    RESULT_OBJ_PATH+="_crophole"
+print("RESULT_OBJ_PATH: ",RESULT_OBJ_PATH)
+
 if not os.path.exists(RESULT_PATH): os.mkdir(RESULT_PATH)
 if not os.path.exists(RESULT_OBJ_PATH): os.makedirs(RESULT_OBJ_PATH, exist_ok=True)
+
+if FLAGS.two_stream_output:
+    if FLAGS.cam_est:
+        RESULT_OBJ_G_PATH = os.path.join(LOG_DIR, 'test_objs', "camest_global_"
+                                       + str(RESOLUTION) + "_" + str(FLAGS.iso))
+        RESULT_OBJ_L_PATH = os.path.join(LOG_DIR, 'test_objs', "camest_local_"
+                                         + str(RESOLUTION) + "_" + str(FLAGS.iso))
+    else:
+        RESULT_OBJ_G_PATH = os.path.join(LOG_DIR, 'test_objs', "global_" + str(RESOLUTION) + "_" + str(FLAGS.iso))
+        RESULT_OBJ_L_PATH = os.path.join(LOG_DIR, 'test_objs', "local_" + str(RESOLUTION) + "_" + str(FLAGS.iso))
+    print("RESULT_OBJ_G_PATH: ", RESULT_OBJ_G_PATH)
+    print("RESULT_OBJ_L_PATH: ", RESULT_OBJ_L_PATH)
 
 LOG_FOUT = open(os.path.join(LOG_DIR, 'log_test.txt'), 'w')
 LOG_FOUT.write(str(FLAGS)+'\n')
@@ -145,7 +160,7 @@ if VV:
     if FLAGS.threedcnn:
         info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
                 'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_full'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
         info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
                 'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1'}
     else:
@@ -155,7 +170,7 @@ else:
     if FLAGS.threedcnn:
         info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
                 'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
         info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
                 'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
         if FLAGS.cam_est:
@@ -180,11 +195,10 @@ def create():
     print("--- Get model and loss")
     # Get model and loss
 
-    end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, bn=False,FLAGS=FLAGS)
+    end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, bn=False, FLAGS=FLAGS)
 
     loss, end_points = model.get_loss(end_points,
-        sdf_weight=SDF_WEIGHT, mask_tp=FLAGS.mask_tp, mask_rt=FLAGS.mask_rt,
-        num_sample_points=NUM_SAMPLE_POINTS, FLAGS=FLAGS)
+        sdf_weight=SDF_WEIGHT, num_sample_points=NUM_SAMPLE_POINTS, FLAGS=FLAGS)
     # Create a session
     gpu_options = tf.GPUOptions() # per_process_gpu_memory_fraction=0.99
     config = tf.ConfigProto(gpu_options=gpu_options)
@@ -273,11 +287,14 @@ def test_one_epoch(sess, ops):
                     all_pts = np.concatenate((all_pts, extra_pts), axis=1).reshape(SPLIT_SIZE, 1, -1, 3)
                     print('all_pts', all_pts.shape)
                     batch_points = np.concatenate((batch_points, all_pts), axis=1)
-
-            pred_sdf_val_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
             if FLAGS.two_stream_output:
-                pred_sdf_val_g_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 1))
-                pred_sdf_val_l_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 1))
+                pred_sdf_val_g_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
+                pred_sdf_val_l_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
+            elif FLAGS.crophole > 0:
+                pred_sdf_val_c_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
+                collect_sample_img_points_val = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2))
+            else:
+                pred_sdf_val_all = np.zeros((SPLIT_SIZE, BATCH_SIZE, NUM_SAMPLE_POINTS, 2 if FLAGS.binary else 1))
             for sp in range(SPLIT_SIZE):
                 if FLAGS.threedcnn:
                     feed_dict = {ops['is_training_pl']: is_training,
@@ -289,25 +306,109 @@ def test_one_epoch(sess, ops):
                                  ops['input_pls']['imgs']: batch_data['img'],
                                  ops['input_pls']['trans_mat']: batch_data['trans_mat']}
                 if FLAGS.two_stream_output:
-                    
+                    output_list = [ops['end_points']['pred_sdf'], ops['end_points']['ref_img'],
+                                   ops['end_points']['sample_img_points'], ops['end_points']['resized_ref_img'],
+                                   ops['end_points']["pred_sdf_value_global"],
+                                   ops['end_points']["pred_sdf_value_local"]]
+                    pred_sdf_val, ref_img_val, sample_img_points_val, resized_ref_img_val, pred_sdf_value_global,\
+                        pred_sdf_value_local = sess.run(output_list, feed_dict=feed_dict)
+                    pred_sdf_val_g_all[sp, :, :, :] = pred_sdf_value_global
+                    pred_sdf_val_l_all[sp, :, :, :] = pred_sdf_value_local
+                elif FLAGS.crophole > 0:
+                    output_list = [ops['end_points']['pred_sdf'], ops['end_points']['ref_img'],
+                                   ops['end_points']['sample_img_points'], ops['end_points']['resized_ref_img'],
+                                   ops['end_points']["pred_sdf_value_global"]]
+                    pred_sdf_val, ref_img_val, sample_img_points_val, resized_ref_img_val, pred_sdf_value_global\
+                        = sess.run(output_list, feed_dict=feed_dict)
+                    pred_sdf_val_c_all[sp, :, :, :] = pred_sdf_value_global
+                    collect_sample_img_points_val[sp, :, :, :] = sample_img_points_val
                 else:
                     output_list = [ops['end_points']['pred_sdf'], ops['end_points']['ref_img'],
-                                   ops['end_points']['sample_img_points']]
-                    pred_sdf_val, ref_img_val, sample_img_points_val = sess.run(output_list, feed_dict=feed_dict)
-            pred_sdf_val_all[sp,:,:,:] = pred_sdf_val
-            pred_sdf_val_all = np.swapaxes(pred_sdf_val_all,0,1) # B, S, NUM SAMPLE, 1 or 2
-            pred_sdf_val_all = pred_sdf_val_all.reshape((BATCH_SIZE,-1,2 if FLAGS.binary else 1))[:, :TOTAL_POINTS, :]
-            if FLAGS.binary:
-                expo = np.exp(pred_sdf_val_all)
-                prob = expo[:,:,1] / np.sum(expo, axis = 2)
-                result = (prob - 0.5) / 10.
-                print("result.shape", result.shape)
+                                   ops['end_points']['sample_img_points'], ops['end_points']['resized_ref_img']]
+                    pred_sdf_val, ref_img_val, sample_img_points_val, resized_ref_img_val\
+                        = sess.run(output_list, feed_dict=feed_dict)
+                    pred_sdf_val_all[sp,:,:,:] = pred_sdf_val
+
+            if FLAGS.two_stream_output:
+                pred_sdf_val_g_all = np.swapaxes(pred_sdf_val_g_all, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
+                pred_sdf_val_g_all = pred_sdf_val_g_all.reshape((BATCH_SIZE, -1, 2 if FLAGS.binary else 1))[:,
+                                     :TOTAL_POINTS, :]
+                result_g = pred_sdf_val_g_all / SDF_WEIGHT
+
+                pred_sdf_val_l_all = np.swapaxes(pred_sdf_val_l_all, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
+                pred_sdf_val_l_all = pred_sdf_val_l_all.reshape((BATCH_SIZE, -1, 2 if FLAGS.binary else 1))[:,
+                                     :TOTAL_POINTS, :]
+                result_l = pred_sdf_val_l_all / SDF_WEIGHT
+            if FLAGS.crophole > 0:
+                # print("sample_img_points_val:",sample_img_points_val)
+                sample_img_points_val = np.swapaxes(collect_sample_img_points_val, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
+                sample_img_points_val = sample_img_points_val.reshape((-1, 2))[:TOTAL_POINTS, :]
+                sample_img_points_ind = np.rint(sample_img_points_val).astype(np.int)
+                sample_img_points_ind = sample_img_points_ind[:,0] * 224 + sample_img_points_ind[:,1]
+                resized_ref_img_val = np.reshape(resized_ref_img_val, (-1,3))
+                # print("resized_ref_img_val.shape, sample_img_points_ind.shape", resized_ref_img_val.shape, sample_img_points_ind.shape)
+                sample_img_points_color = resized_ref_img_val[sample_img_points_ind,:]
+                # print("sample_img_points_color.shape, ", sample_img_points_color.shape, sample_img_points_color)
+                sample_img_points_intensity = np.sum(sample_img_points_color, axis=1)
+                sample_img_points_crop = np.reshape(np.less(sample_img_points_intensity, 0.05).astype(np.float32) * FLAGS.crophole, (BATCH_SIZE,TOTAL_POINTS,1))
+                # print(np.max(sample_img_points_intensity), sample_img_points_crop)
+                pred_sdf_val_c_all = np.swapaxes(pred_sdf_val_c_all, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
+                pred_sdf_val_c_all = pred_sdf_val_c_all.reshape((BATCH_SIZE, -1, 2 if FLAGS.binary else 1))[:,:TOTAL_POINTS, :]
+                if FLAGS.binary:
+                    expo = np.exp(pred_sdf_val_c_all)
+                    prob = expo[:,:,1] / np.sum(expo, axis = 2)
+                    result_c = (prob - 0.5) / 10.
+                    print("result_c.shape", result_c.shape)
+                else:
+                    result_c = pred_sdf_val_c_all / SDF_WEIGHT
+                print("result_c.shape", result_c.shape)
+                result_c = result_c + sample_img_points_crop
             else:
-                result = pred_sdf_val_all / SDF_WEIGHT
+                pred_sdf_val_all = np.swapaxes(pred_sdf_val_all, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
+                pred_sdf_val_all = pred_sdf_val_all.reshape((BATCH_SIZE, -1, 2 if FLAGS.binary else 1))[:,
+                                   :TOTAL_POINTS, :]
+
+                if FLAGS.binary:
+                    expo = np.exp(pred_sdf_val_all)
+                    prob = expo[:,:,1] / np.sum(expo, axis = 2)
+                    result = (prob - 0.5) / 10.
+                    print("result.shape", result.shape)
+                else:
+                    result = pred_sdf_val_all / SDF_WEIGHT
+
+
             for b in range(BATCH_SIZE):
-                print("{}/{}, submit create_obj {}, {}, {}".format(batch_idx, num_batches, batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b]))
-                executor.submit(create_obj, result[b], batch_data['sdf_params'][b], RESULT_OBJ_PATH,
-                    batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b], FLAGS.iso)
+                if FLAGS.two_stream_output:
+                    print("{}/{}, submit create_obj global {}, {}, {}".format(batch_idx, num_batches, batch_data['cat_id'][b],
+                                                                       batch_data['obj_nm'][b],
+                                                                       batch_data['view_id'][b]))
+                    executor.submit(create_obj, result_g[b], batch_data['sdf_params'][b], RESULT_OBJ_G_PATH,
+                                    batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b],
+                                    FLAGS.iso, "g")
+
+
+                    print("{}/{}, submit create_obj local {}, {}, {}".format(batch_idx, num_batches,
+                                                                              batch_data['cat_id'][b],
+                                                                              batch_data['obj_nm'][b],
+                                                                              batch_data['view_id'][b]))
+                    executor.submit(create_obj, result_l[b], batch_data['sdf_params'][b], RESULT_OBJ_L_PATH,
+                                    batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b],
+                                    FLAGS.iso, "l")
+                elif FLAGS.crophole > 0:
+                    print("{}/{}, submit create_obj {}, {}, {}".format(batch_idx, num_batches, batch_data['cat_id'][b],
+                                                                       batch_data['obj_nm'][b],
+                                                                       batch_data['view_id'][b]))
+                    executor.submit(create_obj, result_c[b], batch_data['sdf_params'][b], RESULT_OBJ_PATH,
+                                    batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b],
+                                    FLAGS.iso, "c"+str(FLAGS.crophole))
+
+                else:
+                    print("{}/{}, submit create_obj {}, {}, {}".format(batch_idx, num_batches, batch_data['cat_id'][b],
+                                                                       batch_data['obj_nm'][b],
+                                                                       batch_data['view_id'][b]))
+                    executor.submit(create_obj, result[b], batch_data['sdf_params'][b], RESULT_OBJ_PATH,
+                                    batch_data['cat_id'][b], batch_data['obj_nm'][b], batch_data['view_id'][b],
+                                    FLAGS.iso, "")
 
 
 def to_binary(res, pos, pred_sdf_val_all, sdf_file):
@@ -323,14 +424,14 @@ def to_binary(res, pos, pred_sdf_val_all, sdf_file):
     f_sdf_bin.write(val)
     f_sdf_bin.close()
 
-def create_obj(pred_sdf_val, sdf_params, dir, cat_id, obj_nm, view_id, i):
+def create_obj(pred_sdf_val, sdf_params, dir, cat_id, obj_nm, view_id, i, type):
     if not isinstance(view_id, str):
         view_id = "%02d"%view_id
     dir = os.path.join(dir, cat_id)
     os.makedirs(dir, exist_ok=True)
     obj_nm = cat_id +"_" + obj_nm
-    cube_obj_file = os.path.join(dir, obj_nm+"_"+view_id+".obj")
-    sdf_file = os.path.join(dir, obj_nm+"_"+view_id+".dist")
+    cube_obj_file = os.path.join(dir, obj_nm+"_"+type+"_"+view_id+".obj")
+    sdf_file = os.path.join(dir, obj_nm+"_"+type+"_"+view_id+".dist")
     to_binary((RESOLUTION-1), sdf_params, pred_sdf_val, sdf_file)
     create_one_cube_obj("/home/xharlie/dev/isosurface/computeMarchingCubes", i, sdf_file, cube_obj_file)
     command_str = "rm -rf " + sdf_file
@@ -371,6 +472,15 @@ if __name__ == "__main__":
     # 1. create all categories / some of the categories:
     create()
 
+    # nohup python -u test/inference_sdf.py --category chair --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_DISNChair_chair_twostreamoutput.log &
+
+    # nohup python -u test/inference_sdf.py --category chair --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.05 --category chair  &> log/create_DISNChair_chair_twostreamoutput_0.05.log &
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.05 --img_feat_twostream --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.05_0.00.log &
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.2 --img_feat_twostream --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.2_0.00.log &
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.02 --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.02_0.00.log &
 
 
     # 2. create single obj, just run python -u create_sdf.py

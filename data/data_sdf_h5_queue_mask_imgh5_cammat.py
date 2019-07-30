@@ -161,7 +161,7 @@ class Pt_sdf_img(threading.Thread):
         img_h5 = os.path.join(img_dir, "%02d.h5"%num)
         cam_mat, cam_pos, trans_mat =None, None, None
         with h5py.File(img_h5, 'r') as h5_f:
-            if self.FLAGS.img_feat:
+            if self.FLAGS.img_feat_onestream:
                 trans_mat = h5_f["trans_mat"][:].astype(np.float32)
                 RT = h5_f["regress_mat"][:].astype(np.float32)
                 K = h5_f["K"][:].astype(np.float32)

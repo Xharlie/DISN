@@ -70,12 +70,11 @@ def get_model(ref_dict, num_point, is_training, bn=False, bn_decay=None, img_siz
             ref_img = tf.concat([ref_img_rgb, ref_img_alpha], axis = -1)
         else:
             ref_img = tf.image.resize_bilinear(ref_img, [img_size, img_size])
-
+    end_points['resized_ref_img'] = ref_img
     vgg.vgg_16.default_image_size = img_size
-    with slim.arg_scope([slim.conv2d],
-                         weights_regularizer=slim.l2_regularizer(wd)):
+    with slim.arg_scope([slim.conv2d], weights_regularizer=slim.l2_regularizer(wd)):
         ref_feats_embedding, vgg_end_points = vgg.vgg_16(ref_img, num_classes=FLAGS.num_classes, is_training=False, scope='vgg_16', spatial_squeeze=False)
-        ref_feats_embedding_cnn = tf.squeeze(ref_feats_embedding, axis = [1,2]) 
+        ref_feats_embedding_cnn = tf.squeeze(ref_feats_embedding, axis = [1,2])
     end_points['img_embedding'] = ref_feats_embedding_cnn
     point_img_feat=None
     pred_sdf=None
@@ -138,7 +137,8 @@ def get_model(ref_dict, num_point, is_training, bn=False, bn_decay=None, img_siz
                 pred_sdf = pred_sdf_value_global + pred_sdf_value_local
 
         else:
-            sample_img_points = tf.zeros((batch_size, FLAGS.num_sample_points, 2), dtype=tf.float32)
+            # sample_img_points = tf.zeros((batch_size, FLAGS.num_sample_points, 2), dtype=tf.float32)
+            sample_img_points = get_img_points(ref_sample_pc, ref_trans_mat)
             if not FLAGS.multi_view:
                 with tf.variable_scope("sdfprediction") as scope:
                     pred_sdf = sdfnet.get_sdf_basic2_binary(ref_sample_pc, ref_feats_embedding_cnn,
@@ -205,7 +205,8 @@ def get_model(ref_dict, num_point, is_training, bn=False, bn_decay=None, img_siz
                 end_points["pred_sdf_value_global"] = pred_sdf_value_global
                 end_points["pred_sdf_value_local"] = pred_sdf_value_local
         else:
-            sample_img_points = tf.zeros((batch_size, FLAGS.num_sample_points, 2), dtype=tf.float32)
+            # sample_img_points = tf.zeros((batch_size, FLAGS.num_sample_points, 2), dtype=tf.float32)
+            sample_img_points = get_img_points(ref_sample_pc, ref_trans_mat)
             if not FLAGS.multi_view:
                 with tf.variable_scope("sdfprediction") as scope:
                     pred_sdf = sdfnet.get_sdf_basic2(ref_sample_pc, ref_feats_embedding_cnn,

@@ -45,7 +45,7 @@ parser.add_argument('--log_dir', default='checkpoint/exp_200', help='Log dir [de
 parser.add_argument('--test_lst_dir', default='/ssd1/datasets/ShapeNet/filelists', help='test mesh data list')
 parser.add_argument('--num_sample_points', type=int, default=2048, help='Sample Point Number for each obj to test[default: 2048]')
 parser.add_argument('--threedcnn', action='store_true')
-parser.add_argument('--img_feat', action='store_true')
+parser.add_argument('--img_feat_onestream', action='store_true')
 parser.add_argument('--img_feat_far', action='store_true')
 parser.add_argument('--img_feat_twostream', action='store_true')
 parser.add_argument('--category', default="all", help='Which single class to train on [default: None]')
@@ -91,7 +91,7 @@ if VV:
     if FLAGS.threedcnn:
         info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
                 'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_full'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
         info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
                 'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1'}
     else:
@@ -102,7 +102,7 @@ else:
         info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
                 'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2',
                 'gt_marching_cube': "/hdd_extra1/datasets/ShapeNet/march_cube_objs/"}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
         info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
                 'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1',
                 'gt_marching_cube':"/ssd1/datasets/ShapeNet/march_cube_objs_v1"}
@@ -486,27 +486,71 @@ if __name__ == "__main__":
 # nohup python -u test/test_cd_emd.py --gpu 1 --batch_size 1 --img_feat_twostream  --num_points 2048 --category all &> log/save_gtpnt_v1.log &
 # nohup python -u test/test_cd_emd.py --gpu 1 --batch_size 1  --num_points 2048 --category all &> log/save_gtpnt_v2.log &
 
-    ## save all pred pnt
+    # save all pred pnt
     # save_all_cat_pred_pnt(cats, FLAGS.cal_dir, FLAGS.test_lst_dir)
 
-
+#
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0 &> log/save_IM-SVR_pnt.log &
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_sep &> log/save_IM-SVR_sep_pnt.log &
-
+#
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/save_3dcnn_pnt.log &
-
+#
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0 &> log/save_DISN_pnt.log &
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_sep &> log/save_DISN_sep_pnt.log &
-
+#
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0 &> log/save_DISN_est_pnt.log &
 # nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_sep &> log/save_DISN_est_sep_pnt.log &
 
+#
+# nohup python -u test/test_cd_emd.py --gpu 0 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/save_binary_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 0 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/save_binarycamest_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 1  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/save_global_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/save_onestream_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/save_onestreamcamest_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/save_DISN_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/save_DISNcamest_chair_pnt_1.6.log &
 
-    ## calculate distance
+
+
+    # calculate distance
     cal_f_score_all_cat(cats, FLAGS.cal_dir, info["gt_marching_cube"],
-        FLAGS.test_lst_dir, [[0.5], [1], [2], [5], [10], [20]], 2.0)
+        FLAGS.test_lst_dir, [[0.5], [1], [2], [5], [10], [20]], 2.5)
 
 # nohup python -u test/test_cd_emd.py --gpu 0 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt.log &
 # nohup python -u test/test_cd_emd.py --gpu 1 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt.log &
 # nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt.log &
 # nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt.log &
+
+
+# nohup python -u test/test_cd_emd.py --gpu 0 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 1 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt_1.6.log &
+
+
+
+
+# nohup python -u test/test_cd_emd.py --gpu 0 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/f_binary_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/f_binarycamest_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 1  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/f_global_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/f_onestream_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/f_onestreamcamest_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/f_DISN_chair_pnt_1.6.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/f_DISNcamest_chair_pnt_1.6.log &
+
+
+
+# 2.5
+# #
+# nohup python -u test/test_cd_emd.py --gpu 2 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/f_binary_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/f_binarycamest_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 2  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/f_global_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/f_onestream_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/f_onestreamcamest_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/f_DISN_chair_pnt_2.5.log &
+# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/f_DISNcamest_chair_pnt_2.5.log &
+# #
