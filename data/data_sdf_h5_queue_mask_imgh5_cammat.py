@@ -6,7 +6,8 @@ import queue
 import sys
 import h5py
 import copy
-
+import random
+import cv2
 FETCH_BATCH_SIZE = 32
 BATCH_SIZE = 32
 HEIGHT = 192
@@ -161,7 +162,7 @@ class Pt_sdf_img(threading.Thread):
         img_h5 = os.path.join(img_dir, "%02d.h5"%num)
         cam_mat, cam_pos, trans_mat =None, None, None
         with h5py.File(img_h5, 'r') as h5_f:
-            if self.FLAGS.img_feat_onestream:
+            if self.FLAGS.img_feat:
                 trans_mat = h5_f["trans_mat"][:].astype(np.float32)
                 RT = h5_f["regress_mat"][:].astype(np.float32)
                 K = h5_f["K"][:].astype(np.float32)
@@ -175,7 +176,7 @@ class Pt_sdf_img(threading.Thread):
                 #                 dtype='float32', compression_opts=4)
             else:
                 cam_mat, cam_pos = h5_f["cam_mat"][:].astype(np.float32), h5_f["cam_pos"][:].astype(np.float32)
-            img_arr = h5_f["img_arr"][:][:,:,:3].astype(np.float32) / 255.
+            img_arr = h5_f["img_arr"][:][:,:,:4].astype(np.float32) / 255.
             return img_arr, cam_mat, cam_pos, trans_mat, RT
 
     def degree2rad(self, params):
@@ -237,11 +238,12 @@ class Pt_sdf_img(threading.Thread):
         batch_sdf_val = np.zeros((self.batch_size, self.gen_num_pt, 1)).astype(np.float32)
         batch_norm_params = np.zeros((self.batch_size, 4)).astype(np.float32)
         batch_sdf_params = np.zeros((self.batch_size, 6)).astype(np.float32)
-        batch_img = np.zeros((self.batch_size, self.FLAGS.img_h, self.FLAGS.img_w, 3), dtype=np.float32)
+        batch_img = np.zeros((self.batch_size, self.FLAGS.img_h, self.FLAGS.img_w, 4), dtype=np.float32)
         batch_img_mat = np.zeros((self.batch_size, 3, 3), dtype=np.float32)
         batch_img_pos = np.zeros((self.batch_size, 3), dtype=np.float32)
         batch_trans_mat = np.zeros((self.batch_size, 4, 3), dtype=np.float32)
         batch_RT_mat = np.zeros((self.batch_size, 4, 3), dtype=np.float32)
+        batch_shifts = np.zeros((self.batch_size, 2), dtype=np.float32)
         batch_cat_id = []
         batch_obj_nm = []
         batch_view_id = []
@@ -253,6 +255,24 @@ class Pt_sdf_img(threading.Thread):
                 raise Exception("single mesh is None!")
             ori_pt, ori_sdf_val, sample_pt, sample_sdf_val, norm_params, sdf_params, img_dir, img_dir_v2, cat_id, obj, num = single_obj
             img, cam_mat, cam_pos, trans_mat, RT = self.get_img(img_dir, num)
+            if self.FLAGS.shift:
+                alpha_pixels = np.argwhere(img[:, :, 3] > 0.00)
+                y_shift_top = min(alpha_pixels[:, 0])
+                y_shift_down = self.FLAGS.img_h - max(alpha_pixels[:, 0])
+
+                x_shift_left = min(alpha_pixels[:,1])
+                x_shift_right = self.FLAGS.img_w - max(alpha_pixels[:,1])
+                y_shift = random.randrange(-y_shift_top, y_shift_down, 1)
+                x_shift = random.randrange(-x_shift_left, x_shift_right, 1)
+                # print(y_shift_top,y_shift_down,y_shift)
+                # print(x_shift_left,x_shift_right,x_shift)
+                img_new = np.zeros((self.FLAGS.img_h, self.FLAGS.img_w, 4), dtype=np.float32)
+                new_alpha_pixels = np.stack((alpha_pixels[:,0] + y_shift, alpha_pixels[:,1] + x_shift), axis=1)
+                img_new[new_alpha_pixels[:, 0], new_alpha_pixels[:, 1], :] = img[alpha_pixels[:, 0], alpha_pixels[:, 1], :]
+                # cv2.imwrite(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'org_%s_%d.png' % (img_dir.split("/")[-1],num)), np.asarray(img*255).astype(np.uint8))
+                # cv2.imwrite(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'shifted_%s_%d.png' % (img_dir.split("/")[-1],num)), np.asarray(img_new*255).astype(np.uint8))
+                # print(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'org_%s_%d.png' % (img_dir.split("/")[-1],num)))
+                # print(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'shifted_%s_%d.png' % (img_dir.split("/")[-1],num)))
             if ori_pt is not None:
                 cf_ref_choice = np.random.randint(ori_pt.shape[0], size=self.num_points)
                 batch_pc[cnt, :, :] = ori_pt[cf_ref_choice, :]
@@ -281,7 +301,11 @@ class Pt_sdf_img(threading.Thread):
             else:
                 raise Exception("no verts or binvox")
             # img, cam_mat, cam_pos = self.get_img_old(img_dir, num, img_file_lst)
-            batch_img[cnt, ...] = img.astype(np.float32)
+            if self.FLAGS.shift:
+                batch_img[cnt, ...] = img_new.astype(np.float32)
+                batch_shifts[cnt, ...] = np.asarray([x_shift, y_shift], dtype=np.float32) * 2 / (self.FLAGS.img_h)
+            else:
+                batch_img[cnt, ...] = img.astype(np.float32)
             # batch_img[cnt, ...] = self.normalize_color(img.astype(np.float32))
             # batch_img_mat[cnt, ...] = cam_mat
             # batch_img_pos[cnt, ...] = cam_pos
@@ -306,6 +330,7 @@ class Pt_sdf_img(threading.Thread):
         batch_data['cat_id'] = batch_cat_id
         batch_data['obj_nm'] = batch_obj_nm
         batch_data['view_id'] = batch_view_id
+        batch_data['shifts'] = batch_shifts
         return batch_data
 
     def refill_data_order(self):
@@ -392,3 +417,35 @@ if __name__ == '__main__':
     points = np.matmul(cloud1, trans.T)
     np.savetxt("ff_rotate.xyz", points)
     np.savetxt("ff.xyz", cloud1)
+    # def get_img(img_dir, num):
+    #     img_h5 = os.path.join(img_dir, "%02d.h5"%num)
+    #     cam_mat, cam_pos, trans_mat =None, None, None
+    #     with h5py.File(img_h5, 'r') as h5_f:
+    #         trans_mat = h5_f["trans_mat"][:].astype(np.float32)
+    #         RT = h5_f["regress_mat"][:].astype(np.float32)
+    #         K = h5_f["K"][:].astype(np.float32)
+    #         img_arr = h5_f["img_arr"][:][:,:,:4].astype(np.float32) / 255.
+    #         return img_arr, cam_mat, cam_pos, trans_mat, RT
+    #
+    #
+    # img, cam_mat, cam_pos, trans_mat, RT = get_img("/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1/03636649/7fa0f8d0da975ea0f323a65d99f15033", 8)
+    # alpha_pixels = np.argwhere(img[:, :, 3] > 0.00)
+    # y_shift_top = min(alpha_pixels[:, 0])
+    # y_shift_down = 137 - max(alpha_pixels[:, 0])
+    #
+    # x_shift_left = min(alpha_pixels[:, 1])
+    # x_shift_right = 137 - max(alpha_pixels[:, 1])
+    # y_shift = random.randrange(-y_shift_top, y_shift_down, 1)
+    # x_shift = random.randrange(-x_shift_left, x_shift_right, 1)
+    # print(y_shift_top, y_shift_down, y_shift)
+    # print(x_shift_left, x_shift_right, x_shift)
+    # img_new = np.zeros((137,137, 4), dtype=np.float32)
+    # new_alpha_pixels = np.stack((alpha_pixels[:, 0] + y_shift, alpha_pixels[:, 1] + x_shift), axis=1)
+    # print(new_alpha_pixels.shape, alpha_pixels.shape, new_alpha_pixels - alpha_pixels)
+    # # for i in range(new_alpha_pixels.shape[0]):
+    # #     img_new[new_alpha_pixels[i,0],new_alpha_pixels[i,1],:] = img[alpha_pixels[i,0],alpha_pixels[i,1],:]
+    # img_new[new_alpha_pixels[:, 0], new_alpha_pixels[:, 1], :] = img[alpha_pixels[:, 0], alpha_pixels[:, 1], :]
+    # cv2.imwrite(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'org_%s_%d.png' % ("7fa0f8d0da975ea0f323a65d99f15033",8)), np.asarray(img*255).astype(np.uint8))
+    # cv2.imwrite(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'shifted_%s_%d.png' % ("7fa0f8d0da975ea0f323a65d99f15033",8)), np.asarray(img_new*255).astype(np.uint8))
+    # print(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'org_%s_%d.png' % ("7fa0f8d0da975ea0f323a65d99f15033",8)))
+    # print(os.path.join("/home/xharlie/dev/DISN_codebase/pnt_vis", 'shifted_%s_%d.png' % ("7fa0f8d0da975ea0f323a65d99f15033",8)))

@@ -149,7 +149,32 @@ for cat_id in cat_ids:
                 #     TEST_LISTINFO += [(cat_id, line.strip(), render)]
                 cats_limit[cat_id] += 1
                 TEST_LISTINFO += [(cat_id, line.strip(), render)]
-
+# TEST_LISTINFO = [
+#     ("03001627","4428b7dc4b6696812905b6e26038a78", 0),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",1),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",2),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",3),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",4),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",5),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",6),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",7),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",8),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",9),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",10),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",11),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",12),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",13),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",14),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",15),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",16),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",17),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",18),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",19),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",20),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",21),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",22),
+#     ("03001627","4428b7dc4b6696812905b6e26038a78",23),
+# ]
 
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')
@@ -472,16 +497,22 @@ if __name__ == "__main__":
     # 1. create all categories / some of the categories:
     create()
 
-    # nohup python -u test/inference_sdf.py --category chair --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_DISNChair_chair_twostreamoutput.log &
+    # nohup python -u test/inference_sdf.py --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_DISNChair_chair_twostreamoutput.log &
 
-    # nohup python -u test/inference_sdf.py --category chair --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.05 --category chair  &> log/create_DISNChair_chair_twostreamoutput_0.05.log &
+    # nohup python -u test/inference_sdf.py --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.05 --category chair  &> log/create_DISNChair_chair_twostreamoutput_0.05.log &
 
-    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.05 --img_feat_twostream --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.05_0.00.log &
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.05 --category chair --img_feat_twostream --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.05_0.00.log &
 
-    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.2 --img_feat_twostream --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.2_0.00.log &
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.2 --category chair --img_feat_twostream --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.2_0.00.log &
 
-    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.02 --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.02_0.00.log &
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.02 --category chair --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.02_0.00.log &
 
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.08 --category chair --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.08_0.00.log &
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.1 --category chair --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.1_0.00.log &
+
+    # nohup python -u test/inference_sdf.py --view_num 24 --crophole 0.14 --category chair --img_feat_twostream --batch_size 1 --gpu 2 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_twostream_crophole_0.14_0.00.log &
 
     # 2. create single obj, just run python -u create_sdf.py
 

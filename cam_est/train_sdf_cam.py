@@ -14,12 +14,11 @@ import time
 from tensorflow.contrib.framework.python.framework import checkpoint_utils
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(os.path.join(os.path.dirname(BASE_DIR), 'data'))
-ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
-sys.path.append(ROOT_DIR) # model
-sys.path.append(os.path.join(ROOT_DIR, 'models'))
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
+sys.path.append(BASE_DIR) # model
+sys.path.append(os.path.join(BASE_DIR, 'models'))
+sys.path.append(os.path.join(BASE_DIR, 'utils'))
 sys.path.append(os.path.join(os.path.dirname(BASE_DIR), 'data'))
-print(os.path.join(ROOT_DIR, 'data'))
+print(os.path.join(BASE_DIR, 'data'))
 import model_sdf_2d_proj_twostream_cam as model
 import data_sdf_h5_queue_mask_imgh5_cammat as data
 
@@ -35,7 +34,7 @@ parser.add_argument('--max_epoch', type=int, default=200, help='Epoch to run [de
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
 parser.add_argument('--img_h', type=int, default=137, help='Image Height')
 parser.add_argument('--img_w', type=int, default=137, help='Image Width')
-parser.add_argument('--verbose_freq', type=int, default=50, help='verbose frequency')
+parser.add_argument('--verbose_freq', type=int, default=100, help='verbose frequency')
 parser.add_argument('--learning_rate', type=float, default=1e-4, help='Initial learning rate [default: 0.001]')
 parser.add_argument('--momentum', type=float, default=0.9, help='Initial learning rate [default: 0.9]')
 parser.add_argument('--optimizer', default='adam', help='adam or momentum [default: adam]')
@@ -53,6 +52,8 @@ parser.add_argument('--test', action="store_true")
 parser.add_argument('--create', action="store_true")
 parser.add_argument('--cat_limit', type=int, default=168000, help="balance each category, 1500 * 24 = 36000")
 parser.add_argument('--img_h5_dir', type=str, default="/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred/", help="where to save img_h5")
+parser.add_argument('--shift', action="store_true")
+parser.add_argument('--shift_weight', type=float, default=0.5)
 
 FLAGS = parser.parse_args()
 
@@ -81,8 +82,8 @@ if not os.path.exists(LOG_DIR): os.makedirs(LOG_DIR)
 RESULT_PATH = os.path.join(LOG_DIR, 'train_results')
 if not os.path.exists(RESULT_PATH): os.mkdir(RESULT_PATH)
 
-VALID_RESULT_PATH = os.path.join(LOG_DIR, 'valid_results')
-TEST_RESULT_PATH = os.path.join(LOG_DIR, 'test_results')
+VALID_RESULT_PATH = os.path.join(LOG_DIR, 'valid_results_'+str(time.time()))
+TEST_RESULT_PATH = os.path.join(LOG_DIR, 'test_results_'+str(time.time()))
 if not os.path.exists(VALID_RESULT_PATH): os.mkdir(VALID_RESULT_PATH)
 if not os.path.exists(TEST_RESULT_PATH): os.mkdir(TEST_RESULT_PATH)
 
@@ -117,7 +118,7 @@ TEST_LISTINFO = []
 # "watercraft": "04530566"
 CAT_LIST = ["02691156", "02828884", "02933112", "02958343", "03001627", "03211117", "03636649", "03691459", "04090263",
             "04256520", "04379243", "04401088", "04530566"]
-
+# CAT_LIST = ["03636649","04090263"]
 cats_limit_train = {}
 cats_limit_test = {}
 cat_ids=[]
@@ -169,6 +170,12 @@ else:
                 for render in range(24):
                     cats_limit_test[cat] += 1
                     TEST_LISTINFO += [(cat, line.strip(), render)]
+    #
+    # cats_limit_test["03636649"] =2
+    # cats_limit_test["04090263"] =1
+    # TEST_LISTINFO = [("03636649", "7fa0f8d0da975ea0f323a65d99f15033", 8),
+    #                  ("03636649", "c372499c4fb0b707e262a7452d41c334", 5),
+    #                  ("04090263", "c02b44f51d159cc4a37c14b361202b90", 19)]
 
 
     info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
@@ -277,7 +284,7 @@ def train():
             print("--- Get model and loss")
             # Get model and loss
 
-            end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, img_size = (IMG_SIZE, IMG_SIZE), bn=False, wd=2e-3)
+            end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, img_size = (IMG_SIZE, IMG_SIZE), bn=False, wd=2e-3, FLAGS=FLAGS)
             loss, end_points = model.get_loss(end_points, sdf_weight=SDF_WEIGHT, FLAGS=FLAGS)
             tf.summary.scalar('loss', loss)
 
@@ -417,13 +424,15 @@ def train_one_epoch(sess, ops, train_writer, saver):
                      ops['input_pls']['sample_pc']: batch_data['sdf_pt'],
                      ops['input_pls']['trans_mat']: batch_data['trans_mat'],
                      ops['input_pls']['RT']: batch_data['RT'],
-                     ops['input_pls']['imgs']: batch_data['img']}
+                     ops['input_pls']['imgs']: batch_data['img'][:,:,:,:3],
+                     ops['input_pls']['shifts']: batch_data['shifts']}
         if FLAGS.rotation:
             feed_dict[ops['input_pls']['sample_pc_rot']] = batch_data['sdf_pt_rot']
         else:
             feed_dict[ops['input_pls']['sample_pc_rot']] = batch_data['sdf_pt']
         output_list = [ops['train_op'], ops['merged'], ops['step'], ops['loss'],
-                       ops['end_points']['pred_sample_img_points'], ops['end_points']['ref_img'], ops['end_points']['rot_homopc'], ops['end_points']['pred_rot_homopc']]
+                       ops['end_points']['sample_img_points'], ops['end_points']['pred_sample_img_points'],
+                       ops['end_points']['ref_img'], ops['end_points']['rot_homopc'], ops['end_points']['pred_rot_homopc']]
 
         loss_list = []
         for il, lossname in enumerate(losses.keys()):
@@ -432,7 +441,7 @@ def train_one_epoch(sess, ops, train_writer, saver):
         outputs = sess.run(output_list + loss_list, feed_dict=feed_dict)
 
         _, summary, step, loss_val, \
-        sample_img_points_val, ref_img_val, rot_homopc_val, pred_rot_homopc_val = outputs[:-len(losses)]
+        sample_img_points_val, pred_sample_img_points_val, ref_img_val, rot_homopc_val, pred_rot_homopc_val = outputs[:-len(losses)]
 
         train_writer.add_summary(summary, step)
 
@@ -447,21 +456,32 @@ def train_one_epoch(sess, ops, train_writer, saver):
             log_string("Model saved in file: %s" % save_path)
 
         verbose_freq = FLAGS.verbose_freq
-        if (batch_idx + 1) % verbose_freq == 0:
+        if (batch_idx) % verbose_freq == 0:
             bid = 0
             np.savetxt(os.path.join(VALID_RESULT_PATH, '%d_rot_homopc.xyz' % batch_idx), rot_homopc_val[bid,:,:])
             np.savetxt(os.path.join(VALID_RESULT_PATH, '%d_pred_rot_homopc.xyz' % batch_idx), pred_rot_homopc_val[bid,:,:])
 
             saveimg = (batch_data['img'][bid,:,:,:] * 255).astype(np.uint8)
             samplept_img = sample_img_points_val[bid,...]
-            choice = np.random.randint(samplept_img.shape[0], size=100)
+            choice = np.random.randint(samplept_img.shape[0], size=10)
             samplept_img = samplept_img[choice, ...]
+
+            pred_sample_img = pred_sample_img_points_val[bid, ...]
+            pred_sample_img = pred_sample_img[choice, ...]
+
             for j in range(samplept_img.shape[0]):
                 x = int(samplept_img[j, 0])
                 y = int(samplept_img[j, 1])
-                cv2.circle(saveimg, (x,y), 3, (0, 0, 255), -1)
-            cv2.imwrite(os.path.join(VALID_RESULT_PATH, '%d_ref_img_resized.png' % batch_idx), saveimg)
+                cv2.circle(saveimg, (x, y), 3, (0, 255, 0, 255), -1)
 
+            for j in range(pred_sample_img.shape[0]):
+                x = int(pred_sample_img[j, 0])
+                y = int(pred_sample_img[j, 1])
+                cv2.circle(saveimg, (x, y), 3, (0, 0, 255, 255), -1)
+            cv2.imwrite(os.path.join(VALID_RESULT_PATH, '%s_%s_%s_comp.png' %
+                                     (
+                                     batch_data['cat_id'][bid], batch_data['obj_nm'][bid], batch_data['view_id'][bid])),
+                        saveimg)
             outstr = ' -- %03d / %03d -- ' % (batch_idx+1, num_batches)
             for lossname in losses.keys():
                 outstr += '%s: %f, ' % (lossname, losses[lossname] / verbose_freq)
@@ -497,7 +517,8 @@ def eval_one_epoch(sess, ops):
                      ops['input_pls']['sample_pc']: batch_data['sdf_pt'],
                      ops['input_pls']['trans_mat']: batch_data['trans_mat'],
                      ops['input_pls']['RT']: batch_data['RT'],
-                     ops['input_pls']['imgs']: batch_data['img']}
+                     ops['input_pls']['imgs']: batch_data['img'][:,:,:,:3],
+                     ops['input_pls']['shifts']: batch_data['shifts']}
         if FLAGS.rotation:
             feed_dict[ops['input_pls']['sample_pc_rot']] = batch_data['sdf_pt_rot']
         else:
@@ -507,7 +528,9 @@ def eval_one_epoch(sess, ops):
                        ops['end_points']['pred_sample_img_points'],
                        ops['end_points']['sample_img_points'],
                        ops['end_points']['ref_img'],
-                       ops['end_points']['rot_homopc'], ops['end_points']['pred_rot_homopc']]
+                       ops['end_points']['rot_homopc'], ops['end_points']['pred_rot_homopc'],
+                       ops['end_points']['results']['rot2d_dist_all'],
+                       ops['end_points']['results']['rot3d_dist_all']]
 
         loss_list = []
         for il, lossname in enumerate(losses.keys()):
@@ -515,7 +538,8 @@ def eval_one_epoch(sess, ops):
 
         outputs = sess.run(output_list + loss_list, feed_dict=feed_dict)
 
-        loss_val, pred_trans_mat_val, pred_sample_img_points_val, sample_img_points_val, ref_img_val, rot_homopc_val, pred_rot_homopc_val = outputs[:-len(losses)]
+        loss_val, pred_trans_mat_val, pred_sample_img_points_val, sample_img_points_val, ref_img_val,\
+        rot_homopc_val, pred_rot_homopc_val, rot2d_dist_all_val, rot3d_dist_all_val = outputs[:-len(losses)]
 
         for il, lossname in enumerate(losses.keys()):
             if lossname == "rot2d_dist":
@@ -525,30 +549,38 @@ def eval_one_epoch(sess, ops):
             losses[lossname] += outputs[len(output_list)+il]
 
         verbose_freq = FLAGS.verbose_freq
-        if (batch_idx + 1) % verbose_freq == 0:
-            bid = 0
-            np.savetxt(os.path.join(TEST_RESULT_PATH, '%d_rot_homopc.xyz' % batch_idx), rot_homopc_val[bid, :, :])
-            np.savetxt(os.path.join(TEST_RESULT_PATH, '%d_pred_rot_homopc.xyz' % batch_idx),
-                       pred_rot_homopc_val[bid, :, :])
+        if (batch_idx) % verbose_freq == 0:
+            log_f_name = os.path.join(TEST_RESULT_PATH, "err_log.txt")
+            bids = range(BATCH_SIZE)
+            for bid in bids:
+                np.savetxt(os.path.join(TEST_RESULT_PATH, '%s_%s_%s_gt.xyz' %
+                    (batch_data['cat_id'][bid], batch_data['obj_nm'][bid], batch_data['view_id'][bid])), rot_homopc_val[bid, :, :])
+                np.savetxt(os.path.join(TEST_RESULT_PATH, '%s_%s_%s_pred.xyz' %
+                    (batch_data['cat_id'][bid], batch_data['obj_nm'][bid], batch_data['view_id'][bid])),
+                           pred_rot_homopc_val[bid, :, :])
+                with open(log_f_name, "a") as logf:
+                    logf.write("rot3d_dist: {}, rot2d_dist: {}, filename: {}_{}_{}_comp.png \n"
+                               .format(rot3d_dist_all_val[bid], rot2d_dist_all_val[bid],
+                               batch_data['cat_id'][bid], batch_data['obj_nm'][bid], batch_data['view_id'][bid]))
+                saveimg = (batch_data['img'][bid, :, :, :] * 255).astype(np.uint8)
+                # pred_saveimg = saveimg.copy()
+                samplept_img = sample_img_points_val[bid, ...]
+                choice = np.random.randint(samplept_img.shape[0], size=10)
+                samplept_img = samplept_img[choice, ...]
+                pred_sample_img = pred_sample_img_points_val[bid, ...][choice, ...]
+                for j in range(samplept_img.shape[0]):
+                    x = int(samplept_img[j, 0])
+                    y = int(samplept_img[j, 1])
+                    cv2.circle(saveimg, (x, y), 3, (0, 255, 0, 255), -1)
 
-            saveimg = (batch_data['img'][bid, :, :, :] * 255).astype(np.uint8)
-            # pred_saveimg = saveimg.copy()
-            samplept_img = sample_img_points_val[bid, ...]
-            choice = np.random.randint(samplept_img.shape[0], size=10)
-            samplept_img = samplept_img[choice, ...]
-            pred_sample_img = pred_sample_img_points_val[bid, ...][choice, ...]
-            for j in range(samplept_img.shape[0]):
-                x = int(samplept_img[j, 0])
-                y = int(samplept_img[j, 1])
-                cv2.circle(saveimg, (x, y), 3, (0, 255, 0), -1)
+                for j in range(pred_sample_img.shape[0]):
+                    x = int(pred_sample_img[j, 0])
+                    y = int(pred_sample_img[j, 1])
+                    cv2.circle(saveimg, (x, y), 3, (0, 0, 255, 255), -1)
+                cv2.imwrite(os.path.join(TEST_RESULT_PATH, '%s_%s_%s_comp.png' %
+                    (batch_data['cat_id'][bid], batch_data['obj_nm'][bid], batch_data['view_id'][bid])), saveimg)
 
-            for j in range(pred_sample_img.shape[0]):
-                x = int(pred_sample_img[j, 0])
-                y = int(pred_sample_img[j, 1])
-                cv2.circle(saveimg, (x, y), 1, (0, 0, 255), -1)
-            cv2.imwrite(os.path.join(TEST_RESULT_PATH, '%d_pred_img_resized.png' % batch_idx), saveimg)
-
-            outstr = ' -- %03d / %03d -- ' % (batch_idx + 1, num_batches)
+                outstr = ' -- %03d / %03d -- ' % (batch_idx + 1, num_batches)
             for lossname in losses.keys():
                 outstr += '%s: %f, ' % (lossname, losses[lossname] / verbose_freq)
                 losses[lossname] = 0
@@ -632,4 +664,20 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         TRAIN_DATASET.shutdown()
     # check_all_h5()
+
+# nohup python -u cam_est/train_sdf_cam.py --test --restore_model /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/cam/checkpoint/cam_mixloss_all_2.93 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/cam/checkpoint/cam_mixloss_all_2.93 --gpu 0 --loss_mode 3DM --verbose_freq 1 &> log/test_cam_mixloss_all_2.93.log &
+
+
+
+# nohup python -u cam_est/train_sdf_cam.py --test --batch_size 1 --restore_model /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/cam/checkpoint/cam_mixloss_all_2.93 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/cam/checkpoint/cam_mixloss_all_2.93 --gpu 0 --loss_mode 3DM --verbose_freq 1 &> log/test_cam_mixloss_3sample.log &
+#
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_0.5 --gpu 0 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 0.5 &> log/cam_3D_shift0.5_all.log &
+#
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_10 --log_dir checkpoint/cam_3D_shift_20 --gpu 1 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 1 &> log/cam_3D_shift20_all.log &
+#
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_2 --gpu 2 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 2 &> log/cam_3D_shift2_all.log &
+#
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_5 --gpu 3 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 5 &> log/cam_3D_shift5_all.log &
+#
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_5 --log_dir checkpoint/cam_3D_shift_10 --gpu 0 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 10 &> log/cam_3D_shift10_all.log &
 

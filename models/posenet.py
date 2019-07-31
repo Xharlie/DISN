@@ -1,4 +1,12 @@
 import tensorflow as tf
+import os
+import sys
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+sys.path.append(os.path.join(ROOT_DIR))
+sys.path.append(os.path.join(ROOT_DIR,'..'))
+sys.path.append(os.path.join(ROOT_DIR, 'models'))
+sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 import tf_util
 
 # batch*n
@@ -46,6 +54,7 @@ def get_cam_mat(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
         scale = tf_util.fully_connected(scale, 32, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
         scale = tf_util.fully_connected(scale, 1, bn=bn, is_training=is_training, scope='fc3', activation_fn=None, bn_decay=bn_decay)
         pred_scale = tf.reshape(scale, [batch_size, 1, 1]) * tf.tile(tf.expand_dims(tf.eye(3), 0), [batch_size, 1, 1])
+
     with tf.variable_scope("ortho6d") as scope:   #
         rotation = tf_util.fully_connected(globalfeat, 512, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
         rotation = tf_util.fully_connected(rotation, 256, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
@@ -67,8 +76,12 @@ def get_cam_mat(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
         pred_translation = tf.reshape(translation, [batch_size, 3])
         pred_translation += tf.constant([-0.00193892, 0.00169222, 1.3949631], dtype=tf.float32)
 
+    with tf.variable_scope("xyshift") as scope:
+        pred_xyshift = tf_util.fully_connected(globalfeat, 128, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
+        pred_xyshift = tf_util.fully_connected(pred_xyshift, 64, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
+        pred_xyshift = tf_util.fully_connected(pred_xyshift, 2, bn=bn, is_training=is_training, scope='fc3', activation_fn=None, bn_decay=bn_decay)
     pred_translation = tf.reshape(pred_translation, [batch_size, 1, 3])
     pred_rotation_mat = compute_rotation_matrix_from_ortho6d(pred_rotation)
     pred_rotation_mat = tf.matmul(pred_scale, pred_rotation_mat)
     pred_RT = tf.concat([pred_rotation_mat, pred_translation], axis = 1)
-    return pred_rotation_mat, pred_translation, pred_RT
+    return pred_rotation_mat, pred_translation, pred_RT, pred_xyshift
