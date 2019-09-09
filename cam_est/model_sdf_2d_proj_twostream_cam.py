@@ -109,7 +109,7 @@ def get_img_points(sample_pc, trans_mat_right, pred_xyshift, FLAGS):
     print("pc_xyz.get_shape()", pc_xyz.get_shape()) # B * N * 3
     pc_xy = tf.cast(tf.divide(pc_xyz[:,:,:2], tf.expand_dims(pc_xyz[:,:,2], axis = 2)), dtype=tf.float32)
     if FLAGS.shift:
-        pc_xy = pc_xy + tf.tile(tf.expand_dims(pred_xyshift * FLAGS.img_h / 2 , axis=1), (1,FLAGS.num_points,1))
+        pc_xy = pc_xy + tf.tile(tf.expand_dims(pred_xyshift / 2 * FLAGS.img_h, axis=1), (1,FLAGS.num_points,1))
     mintensor = tf.constant([0.0,0.0], dtype=tf.float32)
     maxtensor = tf.constant([136.0,136.0], dtype=tf.float32)
     return tf.minimum(maxtensor, tf.maximum(mintensor, pc_xy)), pc_xy

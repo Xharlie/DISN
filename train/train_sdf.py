@@ -7,8 +7,8 @@ import cv2
 import sys
 import time
 from tensorflow.contrib.framework.python.framework import checkpoint_utils
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-print(os.path.join(os.path.dirname(BASE_DIR), 'data'))
+BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+print(os.path.join(BASE_DIR, 'models'))
 sys.path.append(BASE_DIR) # model
 sys.path.append(os.path.join(BASE_DIR, 'models'))
 sys.path.append(os.path.join(BASE_DIR, 'utils'))
@@ -24,11 +24,12 @@ slim = tf.contrib.slim
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', type=str, default='1', help='GPU to use [default: GPU 0]')
 parser.add_argument('--category', type=str, default="all", help='Which single class to train on [default: None]')
-parser.add_argument('--log_dir', default='', help='Log dir [default: log]')
+parser.add_argument('--log_dir', default='checkpoint', help='Log dir [default: log]')
 parser.add_argument('--num_points', type=int, default=1, help='Point Number [default: 2048]')
 parser.add_argument("--beta1", type=float, dest="beta1",
                     default=0.5, help="beta1 of adams")
 parser.add_argument('--num_sample_points', type=int, default=256, help='Sample Point Number [default: 2048]')
+# parser.add_argument('--sdf_points_num', type=int, default=32, help='Sample Point Number [default: 2048]')
 parser.add_argument('--max_epoch', type=int, default=200, help='Epoch to run [default: 201]')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
 parser.add_argument('--img_h', type=int, default=137, help='Image Height')
@@ -49,8 +50,7 @@ parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate fo
 parser.add_argument('--mask_weight', type=float, default=4.0)
 parser.add_argument('--threedcnn', action='store_true')
 parser.add_argument('--volimp', action='store_true')
-parser.add_argument('--img_feat', action='store_true')
-parser.add_argument('--img_feat_far', action='store_true')
+parser.add_argument('--img_feat_onestream', action='store_true')
 parser.add_argument('--img_feat_twostream', action='store_true')
 parser.add_argument('--binary', action='store_true')
 parser.add_argument('--alpha', action='store_true')
@@ -62,7 +62,6 @@ parser.add_argument('--tanh', action='store_true')
 parser.add_argument('--cam_est', action='store_true')
 parser.add_argument('--cat_limit', type=int, default=168000, help="balance each category, 1500 * 24 = 36000")
 parser.add_argument('--multi_view', action='store_true')
-parser.add_argument('--backcolorwhite', action='store_true')
 
 FLAGS = parser.parse_args()
 print(FLAGS)
@@ -134,7 +133,7 @@ for cat_id in cat_ids:
 if FLAGS.threedcnn:
     info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
             'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2'}
-elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
+elif FLAGS.img_feat_onestream or FLAGS.img_feat_twostream:
     info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
             'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
     if FLAGS.cam_est:
@@ -239,7 +238,8 @@ def train():
             # Get model and loss
 
             end_points = model.get_model(input_pls, NUM_POINTS, is_training_pl, bn=False, FLAGS=FLAGS)
-            loss, end_points = model.get_loss(end_points, sdf_weight=SDF_WEIGHT, mask_weight = FLAGS.mask_weight,
+            loss, end_points = model.get_loss(end_points,
+                sdf_weight=SDF_WEIGHT, mask_weight = FLAGS.mask_weight,
                                               num_sample_points=FLAGS.num_sample_points, FLAGS=FLAGS)
             # tf.summary.scalar('loss', loss)
 
@@ -414,14 +414,17 @@ def train_one_epoch(sess, ops, train_writer, saver):
                     y = int(samplept_img[j, 1])
                     cv2.circle(saveimg, (x, y), 3, (0, 0, 255, 255), -1)
                 cv2.imwrite(os.path.join(RESULT_PATH, '%d_ref_img_resized.png' % batch_idx), saveimg)
+
                 np.savetxt(os.path.join(RESULT_PATH, '%d_sdf_pred.txt' % batch_idx), np.concatenate((batch_data['sdf_pt_rot'][bid,:,:], np.expand_dims(pred_sdf_val[bid,:,0],1)), axis=1))
                 np.savetxt(os.path.join(RESULT_PATH, '%d_sdf_ref.txt' % batch_idx), np.concatenate((batch_data['sdf_pt_rot'][bid,:,:], np.expand_dims(ref_sdf_val[bid,:,0],1)), axis=1))
                 ref_sdf_display = batch_data['sdf_val'][bid,:,0]
                 vmin = np.min(ref_sdf_display)
                 vmax = np.max(ref_sdf_display)
                 ref_sdf_display = (ref_sdf_display - vmin) / (vmax - vmin)
+
                 pred_sdf_display = pred_sdf_val[bid,:,0]
                 pred_sdf_display = (pred_sdf_display - vmin) / (vmax - vmin)
+
                 output_utils.output_scale_point_cloud(batch_data['sdf_pt_rot'][bid,:,:], pred_sdf_display, os.path.join(RESULT_PATH, '%d_pred.obj' % batch_idx))
                 output_utils.output_scale_point_cloud(batch_data['sdf_pt_rot'][bid,:,:], ref_sdf_display, os.path.join(RESULT_PATH, '%d_gt.obj' % batch_idx))
             outstr = ' -- %03d / %03d -- ' % (batch_idx+1, num_batches)

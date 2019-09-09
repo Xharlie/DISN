@@ -10,4 +10,6 @@ def get_all_info():
 
 if __name__ == "__main__":
 
+    # nohup python -u create_file_lst.py &> create_imgh5.log &
+
     lst_dir, cats, all_cats, raw_dirs = get_all_info()

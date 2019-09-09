@@ -149,32 +149,32 @@ for cat_id in cat_ids:
                 #     TEST_LISTINFO += [(cat_id, line.strip(), render)]
                 cats_limit[cat_id] += 1
                 TEST_LISTINFO += [(cat_id, line.strip(), render)]
-# TEST_LISTINFO = [
-#     ("03001627","4428b7dc4b6696812905b6e26038a78", 0),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",1),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",2),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",3),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",4),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",5),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",6),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",7),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",8),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",9),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",10),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",11),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",12),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",13),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",14),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",15),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",16),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",17),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",18),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",19),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",20),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",21),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",22),
-#     ("03001627","4428b7dc4b6696812905b6e26038a78",23),
-# ]
+TEST_LISTINFO = [
+    # ("03001627","4428b7dc4b6696812905b6e26038a78", 0),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",1),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",2),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",3),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",4),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",5),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",6),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",7),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",8),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",9),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",10),
+    ("03001627","4428b7dc4b6696812905b6e26038a78",11),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",12),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",13),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",14),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",15),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",16),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",17),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",18),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",19),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",20),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",21),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",22),
+    # ("03001627","4428b7dc4b6696812905b6e26038a78",23),
+]
 
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')
@@ -364,7 +364,7 @@ def test_one_epoch(sess, ops):
                 pred_sdf_val_l_all = pred_sdf_val_l_all.reshape((BATCH_SIZE, -1, 2 if FLAGS.binary else 1))[:,
                                      :TOTAL_POINTS, :]
                 result_l = pred_sdf_val_l_all / SDF_WEIGHT
-            if FLAGS.crophole > 0:
+            elif FLAGS.crophole > 0:
                 # print("sample_img_points_val:",sample_img_points_val)
                 sample_img_points_val = np.swapaxes(collect_sample_img_points_val, 0, 1)  # B, S, NUM SAMPLE, 1 or 2
                 sample_img_points_val = sample_img_points_val.reshape((-1, 2))[:TOTAL_POINTS, :]
@@ -457,6 +457,9 @@ def create_obj(pred_sdf_val, sdf_params, dir, cat_id, obj_nm, view_id, i, type):
     obj_nm = cat_id +"_" + obj_nm
     cube_obj_file = os.path.join(dir, obj_nm+"_"+type+"_"+view_id+".obj")
     sdf_file = os.path.join(dir, obj_nm+"_"+type+"_"+view_id+".dist")
+    if i < 0:
+        pred_sdf_val = pred_sdf_val + i
+        i = 0
     to_binary((RESOLUTION-1), sdf_params, pred_sdf_val, sdf_file)
     create_one_cube_obj("/home/xharlie/dev/isosurface/computeMarchingCubes", i, sdf_file, cube_obj_file)
     command_str = "rm -rf " + sdf_file
@@ -497,7 +500,7 @@ if __name__ == "__main__":
     # 1. create all categories / some of the categories:
     create()
 
-    # nohup python -u test/inference_sdf.py --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 0 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.00 --category chair  &> log/create_DISNChair_chair_twostreamoutput.log &
+    # nohup python -u test/inference_sdf.py --two_stream_output --img_feat_twostream --view_num 1 --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso -0.02 --category chair  &> log/create_DISNChair_chair_twostreamoutput-0.02.log &
 
     # nohup python -u test/inference_sdf.py --two_stream_output --img_feat_twostream --view_num 24 --batch_size 1 --gpu 1 --log_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/ --test_lst_dir /ssd1/datasets/ShapeNet/filelists/  --iso 0.05 --category chair  &> log/create_DISNChair_chair_twostreamoutput_0.05.log &
 
@@ -520,5 +523,5 @@ if __name__ == "__main__":
     #     get_sdf_h5("/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2/03001627/47cd848a5584867b1e8791c225564ae0/ori_sample.h5",
     #                 "03001627", "47cd848a5584867b1e8791c225564ae0")
     # create_obj(sample_sdf_val, sdf_params, "send/",
-    #            "03001627", "97cd4ed02e022ce7174150bd56e389a8", "111", 0.00)
+    #            "", "97cd4ed02e022ce7174150bd56e389a8", "111", 0.00)
 

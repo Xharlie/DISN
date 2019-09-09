@@ -1,0 +1,8 @@
+*.xml
+*.pyc
+.idea/
+*.o
+models/CNN/pretrained_model/
+checkpoint/
+log/
+pnt_vis/

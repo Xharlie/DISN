@@ -673,11 +673,10 @@ if __name__ == "__main__":
 #
 # nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_0.5 --gpu 0 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 0.5 &> log/cam_3D_shift0.5_all.log &
 #
-# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_10 --log_dir checkpoint/cam_3D_shift_20 --gpu 1 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 1 &> log/cam_3D_shift20_all.log &
+# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_1 --gpu 1 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 1 &> log/cam_3D_shift1_all.log &
 #
 # nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_2 --gpu 2 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 2 &> log/cam_3D_shift2_all.log &
 #
 # nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_0.5 --log_dir checkpoint/cam_3D_shift_5 --gpu 3 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 5 &> log/cam_3D_shift5_all.log &
 #
-# nohup python -u cam_est/train_sdf_cam.py --restore_model checkpoint/cam_3D_shift_5 --log_dir checkpoint/cam_3D_shift_10 --gpu 0 --loss_mode 3D --learning_rate 1e-4 --shift --shift_weight 10 &> log/cam_3D_shift10_all.log &
-
+#
