@@ -1,5 +1,7 @@
 # DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction
-Please cite our NeurIPS 2019 paper[https://arxiv.org/abs/1905.10711]
+Please cite our NeurIPS 2019 paper
+[DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
+
 ``` 
 @inProceedings{xu2019disn,
   title={DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction},
@@ -8,10 +10,9 @@ Please cite our NeurIPS 2019 paper[https://arxiv.org/abs/1905.10711]
   year={2019}
 }
 ``` 
-
-
-
-
+Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http://www.lizhuwen.com/)
+**result**</br>
+<img src="./result.png" width = "350px" />
 
 
 Also our data preparation used this paper 'Vega: non-linear fem deformable object simulator'[http://run.usc.edu/vega/SinSchroederBarbic2012.pdf] 
@@ -128,7 +129,7 @@ Please also cite it if you use our code to generate sdf files
   nohup python -u clean_smallparts.py --src_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --tar_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --thread_n 10 &> log/DISN_clean.log &
   ```
 
-## Test and metrics:
+## Evaluation:
 ### please compile models/tf_ops/ approxmatch and nn_distance and cites "A Point Set Generation Network for 3D Object Reconstruction from a Single Image"
 * ### Chamfer Distance and Earth Mover Distance:
   * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
