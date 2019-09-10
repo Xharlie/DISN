@@ -65,7 +65,7 @@ Please also cite it if you use our code to generate sdf files
   wget http://cvgl.stanford.edu/data2/ShapeNetRendering.tgz
   untar it to {your rendered_dir}
   ```
-  * #### run h5 file generation:
+  * #### run h5 file generation (about 26 GB) :
   
   ```
   cd {DISN}
@@ -85,7 +85,7 @@ Please also cite it if you use our code to generate sdf files
   ```
 * ### create h5 file of image and estimated cam parameters:
   ```
-  ＃＃＃　Create img_h5 to {renderedh5_dir_est} in your info.json 
+  ＃＃＃　Create img_h5 to {renderedh5_dir_est} in your info.json, the default is only generate h5 of test images and cam parameters(about 5.3GB) 
   nohup python -u train_sdf_cam.py --img_h5_dir {renderedh5_dir_est} --create --restore_model checkpoint/cam_3D_all --log_dir checkpoint/{your training checkpoint dir} --gpu 0--loss_mode 3D --batch_size 24 &> log/create_cam_mixloss_all.log &
   ```
   
@@ -124,8 +124,22 @@ Please also cite it if you use our code to generate sdf files
   ```
 
 ## Test and metrics:
+### please compile models/tf_ops/ approxmatch and nn_distance and cites "A Point Set Generation Network for 3D Object Reconstruction from a Single Image"
 * ### Chamfer Distance and Earth Mover Distance:
   * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
   ```
-   nohup python -u test_cd_emd.py --img_feat_twostream --view_num 24 --num_sample_points 2048 --gpu 3 --batch_size 24 --log_dir /hdd_extra1/sdf_checkpoint/DISN/ --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0 --test_lst_dir /ssd1/datasets/ShapeNet/filelists/ --category all &> DISN_cd_emd_all.log &
+   nohup python -u test/test_cd_emd.py --img_feat_twostream --view_num 24 --num_sample_points 2048 --gpu 0 --batch_size 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all &> log/DISN_cd_emd_all.log & 
   ```
+* ### F-Score caluculation:
+  * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
+  also the threshold of true can be set, here we use 2.5 for default:
+  ```
+   nohup python -u test/test_f_score.py --img_feat_twostream --view_num 24 --num_sample_points 2048 --gpu 0 --batch_size 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all --truethreshold 2.5 &> log/DISN_fscore_2.5.log & 
+  ```
+ * ### IOU caluculation:
+    * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
+    * #### --dim specify the number of voxels along each 3D dimension.
+
+    ```
+      nohup python -u test/test_iou.py --img_feat_twostream --view_num 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all --dim 110 &> DISN_iou_all.log &
+    ```
