@@ -313,11 +313,11 @@ if __name__ == "__main__":
 
     # nohup python -u create_file_lst.py &> create_imgh5.log &
 
-    lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info(version=1)
+    lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
     convert_img2h5(raw_dirs["rendered_dir"],
                    raw_dirs["renderedh5_dir"],
                    lst_dir, cats,
-                   raw_dirs["sdf_dir"]+"256_expr_1.2_bw_0.1/")
+                   raw_dirs["sdf_dir"])
 
 
     # test_img_h5("/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1/03001627/184b4797cea77beb5ca1c42bb8ac17a/05.h5", 5,

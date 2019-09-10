@@ -245,7 +245,7 @@ def create_sdf(sdfcommand, marching_cube_command, LIB_command, num_sample, bandw
     '''
     print("command:", LIB_command)
     os.system(LIB_command)
-    sdf_dir=os.path.join(raw_dirs["sdf_full_dir"], str(res//reduce)+"_expr_"+str(expand_rate))
+    sdf_dir=raw_dirs["sdf_full_dir"]
     if not os.path.exists(sdf_dir): os.makedirs(sdf_dir)
     start=0
     for catnm in cats.keys():
@@ -253,7 +253,7 @@ def create_sdf(sdfcommand, marching_cube_command, LIB_command, num_sample, bandw
         cat_sdf_dir = os.path.join(sdf_dir, cat_id)
         if not os.path.exists(cat_sdf_dir): os.makedirs(cat_sdf_dir)
         cat_mesh_dir = os.path.join(raw_dirs["mesh_dir"], cat_id)
-        cat_norm_sdf_dir = os.path.join(raw_dirs["sdf_dir"],param_dir, cat_id)
+        cat_norm_sdf_dir = os.path.join(raw_dirs["sdf_dir"], cat_id)
         list_obj=[]
         with open(lst_dir+"/"+str(cat_id)+"_test.lst", "r") as f:
             list_obj = f.readlines()

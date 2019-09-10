@@ -20,6 +20,7 @@ import create_file_lst
 slim = tf.contrib.slim
 
 parser = argparse.ArgumentParser()
+lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 parser.add_argument('--store', action='store_true')
 parser.add_argument('--max_epoch', type=int, default=1, help='Epoch to run [default: 201]')
@@ -30,8 +31,6 @@ parser.add_argument('--decay_step', type=int, default=200000, help='Decay step f
 parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--num_classes', type=int, default=1024, help='vgg global embedding dimensions')
 parser.add_argument('--num_points', type=int, default=1, help='Point Number [default: 2048]')
-parser.add_argument('--mask_tp', type=str, default="neg_two_sides")
-parser.add_argument('--mask_rt', type=int, default=40000)
 parser.add_argument('--alpha', action='store_true')
 parser.add_argument('--rot', action='store_true')
 parser.add_argument('--tanh', action='store_true')
@@ -42,11 +41,10 @@ parser.add_argument('--binary', action='store_true')
 parser.add_argument('--gpu', type=str, default='0', help='GPU to use [default: GPU 0]')
 parser.add_argument('--batch_size', type=int, default=24, help='Batch Size during training [default: 32]')
 parser.add_argument('--log_dir', default='checkpoint/exp_200', help='Log dir [default: log]')
-parser.add_argument('--test_lst_dir', default='/ssd1/datasets/ShapeNet/filelists', help='test mesh data list')
+parser.add_argument('--test_lst_dir', default=lst_dir, help='test mesh data list')
 parser.add_argument('--num_sample_points', type=int, default=2048, help='Sample Point Number for each obj to test[default: 2048]')
 parser.add_argument('--threedcnn', action='store_true')
 parser.add_argument('--img_feat_onestream', action='store_true')
-parser.add_argument('--img_feat_far', action='store_true')
 parser.add_argument('--img_feat_twostream', action='store_true')
 parser.add_argument('--category', default="all", help='Which single class to train on [default: None]')
 parser.add_argument('--view_num', type=int, default=24, help="how many views do you want to create for each obj")
@@ -79,7 +77,6 @@ VV =False
 HOSTNAME = socket.gethostname()
 
 TEST_LISTINFO = []
-lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 
 def log_string(out_str):
@@ -87,33 +84,22 @@ def log_string(out_str):
     LOG_FOUT.flush()
     print(out_str)
 
-if VV:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_full'}
-    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1'}
-    else:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_simp'}
+
+if FLAGS.threedcnn:
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs["3dnnsdf_dir"],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir_v2']}
+elif FLAGS.img_feat_onestream or FLAGS.img_feat_twostream:
+    info = {'rendered_dir': raw_dirs["renderedh5_dir"],
+            'sdf_dir': raw_dirs["sdf_dir"],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir']}
+    if FLAGS.cam_est:
+        info['rendered_dir']= raw_dirs["renderedh5_dir_est"]
 else:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2',
-                'gt_marching_cube': "/hdd_extra1/datasets/ShapeNet/march_cube_objs/"}
-    elif FLAGS.img_feat_onestream or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1',
-                'gt_marching_cube':"/ssd1/datasets/ShapeNet/march_cube_objs_v1"}
-        if FLAGS.cam_est:
-            info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred_3d',
-                    'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1',
-                    'gt_marching_cube': "/ssd1/datasets/ShapeNet/march_cube_objs_v1/"}
-    else:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_neg/simp_256_expr_1.2_bw_0.1',
-                'gt_marching_cube': "/hdd_extra1/datasets/ShapeNet/march_cube_objs"}
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs['sdf_dir_v2'],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir_v2']}
+
 print(info)
 
 def load_model(sess, LOAD_MODEL_FILE, prefixs, strict=False):
@@ -229,106 +215,7 @@ def sample_save_pred_pnt(cat_id, cat_nm, pred_dir, test_lst_f):
                 np.savetxt(savefn, verts_batch[i, ...], delimiter=',')
                 print("saved gt pnt of {} at {}".format(obj_id, savefn))
 
-def cal_f_score_all_cat(cats, pred_dir, gt_dir, test_lst_dir,threshold_lst, side_len):
-    precision_lst = []
-    recall_lst = []
-    cnt_lst = []
-    for cat_nm, cat_id in cats.items():
-        pred_dir_cat = os.path.join(pred_dir, cat_id)
-        gt_dir_cat = os.path.join(gt_dir, cat_id)
-        test_lst_f = os.path.join(test_lst_dir, cat_id + "_test.lst")
-        thresholds = np.asarray(threshold_lst, dtype=np.float32) * 0.01 * side_len
-        precision_avg, recall_avg, cnt \
-            = f_score_cat(cat_id, cat_nm, pred_dir_cat, gt_dir_cat, test_lst_f, thresholds)
-        precision_lst.append(precision_avg)
-        recall_lst.append(recall_avg)
-        cnt_lst.append(cnt)
-        print("{}, {}, precision_avg {}, recal_avg{}, count {}"
-              .format(cat_nm, cat_id, precision_avg, recall_avg, cnt))
-    print("done!")
-    precision = np.asarray(precision_lst) # 13 * 5
-    recall = np.asarray(recall_lst)
-    pre_w_avg = np.average(precision, axis=0, weights=cnt_lst)
-    rec_w_avg = np.average(recall, axis=0, weights=cnt_lst)
-    f_score = 2 * (pre_w_avg * rec_w_avg) / (pre_w_avg + rec_w_avg)
-    print("pre_w_avg {}, rec_w_avg {}, f_score {}".format(pre_w_avg, rec_w_avg, f_score))
 
-def f_score_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f, thresholds):
-    pred_dict = build_file_dict(pred_dir)
-    with tf.Graph().as_default():
-        with tf.device('/gpu:0'):
-            config = tf.ConfigProto()
-            config.gpu_options.allow_growth = True
-            config.allow_soft_placement = True
-            config.log_device_placement = False
-            sess = tf.Session(config=config)
-            sampled_pc = tf.placeholder(tf.float32, shape=(FLAGS.batch_size + 1, FLAGS.num_sample_points, 3))
-            #
-            dists_forward_sqrt, dists_backward_sqrt \
-                = get_points_distance(sampled_pc)
-            count = 0
-            precision_sum = 0
-            recall_sum = 0
-            with open(test_lst_f, "r") as f:
-                test_objs = f.readlines()
-                for obj_id in test_objs:
-                    obj_id = obj_id.rstrip('\r\n')
-                    pred_pnt_dir = os.path.join(os.path.dirname(pred_dir),
-                        "pnt_{}_{}".format(FLAGS.num_sample_points, cat_id))
-                    forfl = os.path.join(pred_pnt_dir, "for_dist_{}.txt".format(obj_id))
-                    backfl = os.path.join(pred_pnt_dir, "bac_dist_{}.txt".format(obj_id))
-                    if not os.path.exists(forfl):
-                        gt_pnt_path = os.path.join(gt_dir, obj_id, "pnt_{}.txt".format(FLAGS.num_sample_points))
-                        # npnts, 3
-                        gt_pnts = np.loadtxt(gt_pnt_path,dtype=float, delimiter=',')
-                        pred_path_lst = pred_dict[obj_id]
-                        verts_batch = np.zeros((FLAGS.view_num + 1, FLAGS.num_sample_points, 3), dtype=np.float32)
-                        verts_batch[0, ...] = gt_pnts
-                        for i in range(len(pred_path_lst)):
-                            pred_mesh_fl = pred_path_lst[i]
-                            view_id = pred_mesh_fl[-6:-4]
-                            pred_pnt_path = os.path.join(pred_pnt_dir, "pnt_{}_{}.txt".format(obj_id, view_id))
-                            pred_pnts = np.loadtxt(pred_pnt_path,dtype=float, delimiter=',')
-                            verts_batch[i + 1, ...] = pred_pnts
-                        if FLAGS.batch_size == FLAGS.view_num:
-                            feed_dict = {sampled_pc: verts_batch}
-                            # view * npnt
-                            dists_forward_sqrt_val, dists_backward_sqrt_val\
-                                = sess.run([dists_forward_sqrt, dists_backward_sqrt], feed_dict=feed_dict)
-                        else:
-                            raise NotImplementedError
-                        np.savetxt(forfl, dists_forward_sqrt_val)
-                        np.savetxt(backfl, dists_backward_sqrt_val)
-                    else:
-                        dists_forward_sqrt_val = np.loadtxt(forfl)
-                        dists_backward_sqrt_val = np.loadtxt(backfl)
-                    dists_forward_sqrt_val = np.tile(dists_forward_sqrt_val, [thresholds.shape[0], 1])
-                    dists_backward_sqrt_val = np.tile(dists_backward_sqrt_val, [thresholds.shape[0], 1])
-                    pre_sum_val = np.sum(np.less(dists_forward_sqrt_val, thresholds), axis=1)
-                    rec_sum_val = np.sum(np.less(dists_backward_sqrt_val, thresholds), axis=1)
-                    precision = pre_sum_val / (dists_forward_sqrt_val.shape[1])
-                    recall = rec_sum_val / (dists_backward_sqrt_val.shape[1])
-                    print("cat_id {}, obj_id {}: pre_sum {}, rec_sum {}, precision {}, recall {}"
-                          .format(cat_id, obj_id, pre_sum_val, rec_sum_val, precision, recall))
-                    precision_sum += precision
-                    recall_sum += recall
-                    count += 1
-    return precision_sum/count, recall_sum/count, count
-
-def get_points_distance(sampled_pc):
-    src_pc = tf.tile(tf.expand_dims(sampled_pc[0, :, :], axis=0), (FLAGS.batch_size, 1, 1))
-    if sampled_pc.get_shape().as_list()[0] == 2:
-        pred = tf.expand_dims(sampled_pc[1, :, :], axis=0)
-    else:
-        pred = sampled_pc[1:, :, :]
-    print(src_pc.get_shape())
-    print(pred.get_shape())
-    dists_forward, _, dists_backward, _ = tf_nndistance.nn_distance(pred, src_pc)
-    dists_forward_sqrt = tf.math.sqrt(dists_forward)
-    dists_backward_sqrt = tf.math.sqrt(dists_backward)
-    dists_forward_sqrt = tf.reshape(dists_forward_sqrt, [-1])
-    dists_backward_sqrt = tf.reshape(dists_backward_sqrt, [-1])
-    return dists_forward_sqrt, dists_backward_sqrt
 
 def cd_emd_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f):
     pred_dict = build_file_dict(pred_dir)
@@ -449,7 +336,6 @@ if __name__ == "__main__":
     elif FLAGS.category == "clean":
         cats ={ "cabinet": "02933112",
                 "display": "03211117",
-                "lamp": "03636649",
                 "speaker": "03691459",
                 "rifle": "04090263",
                 "watercraft": "04530566"
@@ -457,8 +343,8 @@ if __name__ == "__main__":
     else:
         cats={FLAGS.category: cats_all[FLAGS.category]}
 
-    # cd_emd_all(cats, FLAGS.cal_dir,
-    #            info["gt_marching_cube"], FLAGS.test_lst_dir)
+    cd_emd_all(cats, FLAGS.cal_dir,
+               info["gt_marching_cube"], FLAGS.test_lst_dir)
 
     # 1. test cd_emd for all categories / some of the categories:
 
@@ -479,78 +365,3 @@ if __name__ == "__main__":
 
     # nohup python -u test_allpts.py --gpu 3 --batch_size 24 --binary  --test_lst_dir /ssd1/datasets/ShapeNet/filelists/ --num_points 2048 --category all &> cd_emd_all_all_binary.log &
 
-
-    # 2.
-    ## save all gt pnt
-    # save_all_cat_gt_pnt(cats, info["gt_marching_cube"], FLAGS.test_lst_dir)
-# nohup python -u test/test_cd_emd.py --gpu 1 --batch_size 1 --img_feat_twostream  --num_points 2048 --category all &> log/save_gtpnt_v1.log &
-# nohup python -u test/test_cd_emd.py --gpu 1 --batch_size 1  --num_points 2048 --category all &> log/save_gtpnt_v2.log &
-
-    # save all pred pnt
-    # save_all_cat_pred_pnt(cats, FLAGS.cal_dir, FLAGS.test_lst_dir)
-
-#
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0 &> log/save_IM-SVR_pnt.log &
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_sep &> log/save_IM-SVR_sep_pnt.log &
-#
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/save_3dcnn_pnt.log &
-#
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0 &> log/save_DISN_pnt.log &
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_sep &> log/save_DISN_sep_pnt.log &
-#
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0 &> log/save_DISN_est_pnt.log &
-# nohup python -u test/test_cd_emd.py --num_points 2048 --category clean --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_sep &> log/save_DISN_est_sep_pnt.log &
-
-#
-# nohup python -u test/test_cd_emd.py --gpu 0 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/save_binary_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 0 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/save_binarycamest_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 1  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/save_global_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/save_onestream_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/save_onestreamcamest_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/save_DISN_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/save_DISNcamest_chair_pnt_1.6.log &
-
-
-
-    # calculate distance
-    cal_f_score_all_cat(cats, FLAGS.cal_dir, info["gt_marching_cube"],
-        FLAGS.test_lst_dir, [[0.5], [1], [2], [5], [10], [20]], 2.5)
-
-# nohup python -u test/test_cd_emd.py --gpu 0 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt.log &
-# nohup python -u test/test_cd_emd.py --gpu 1 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt.log &
-
-
-# nohup python -u test/test_cd_emd.py --gpu 0 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 1 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt_1.6.log &
-
-
-
-
-# nohup python -u test/test_cd_emd.py --gpu 0 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/f_binary_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/f_binarycamest_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 1  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/f_global_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/f_onestream_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/f_onestreamcamest_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/f_DISN_chair_pnt_1.6.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/f_DISNcamest_chair_pnt_1.6.log &
-
-
-
-# 2.5
-# #
-# nohup python -u test/test_cd_emd.py --gpu 2 --threedcnn --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/3dcnn/test_objs/65_0.0 &> log/f_3dcnn_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/IM-SVR/test_objs/65_0.0_comb &> log/f_IM-SVR_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/65_0.0_comb &> log/f_DISN_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --cam_est --img_feat_twostream --num_points 2048 --category all --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/main/DISN/test_objs/camest_65_0.0_comb &> log/f_DISNcamest_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --binary --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/65_0.0 &> log/f_binary_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --binary --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/loctwobin/test_objs/camest_65_0.0 &> log/f_binarycamest_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 2  --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/noloco/test_objs/65_0.0 &> log/f_global_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/65_0.0 &> log/f_onestream_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_onestream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/onestream/test_objs/camest_65_0.0 &> log/f_onestreamcamest_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 3 --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/65_0.0 &> log/f_DISN_chair_pnt_2.5.log &
-# nohup python -u test/test_cd_emd.py --gpu 2 --cam_est --img_feat_twostream --num_points 2048 --category chair --cal_dir /home/xharlie/dev/ProgressivePointSetGeneration/shapenet/sdf/checkpoint/ablation/DISNChair/test_objs/camest_65_0.0 &> log/f_DISNcamest_chair_pnt_2.5.log &
-# #

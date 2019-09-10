@@ -18,6 +18,7 @@ import model_normalization as model
 import data_sdf_h5_queue # as data
 import output_utils
 import create_file_lst
+lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 slim = tf.contrib.slim
 
@@ -43,8 +44,8 @@ parser.add_argument('--restore_model', default='', help='restore_model') #checkp
 parser.add_argument('--restore_modelpn', default='', help='restore_model')#checkpoint/sdf_3dencoder_sdfbasic2/latest.ckpt
 parser.add_argument('--restore_modelcnn', default='', help='restore_model')#../../models/CNN/pretrained_model/vgg_16.ckpt
 
-parser.add_argument('--train_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='train mesh data list')
-parser.add_argument('--valid_lst_dir', default='/ssd1/datasets/ShapeNet/filelists/', help='test mesh data list')
+parser.add_argument('--train_lst_dir', default=lst_dir, help='train mesh data list')
+parser.add_argument('--valid_lst_dir', default=lst_dir, help='test mesh data list')
 parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--mask_weight', type=float, default=4.0)
@@ -105,7 +106,6 @@ BN_DECAY_DECAY_STEP = float(DECAY_STEP)
 BN_DECAY_CLIP = 0.99
 IMG_SIZE = 137
 SDF_WEIGHT = 10.
-lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 
 TRAIN_LISTINFO = []
@@ -131,17 +131,16 @@ for cat_id in cat_ids:
 
 
 if FLAGS.threedcnn:
-    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2'}
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs["3dnnsdf_dir"]}
 elif FLAGS.img_feat_onestream or FLAGS.img_feat_twostream:
-    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
-            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
+    info = {'rendered_dir': raw_dirs["renderedh5_dir"],
+            'sdf_dir': raw_dirs["sdf_dir"]}
     if FLAGS.cam_est:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1'}
+        info['rendered_dir']= raw_dirs["renderedh5_dir_est"]
 else:
-    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_neg/simp_256_expr_1.2_bw_0.1'}
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs['sdf_dir_v2']}
 print(info)
 
 TRAIN_DATASET = data_sdf_h5_queue.Pt_sdf_img(FLAGS, listinfo=TRAIN_LISTINFO, info=info, cats_limit=cats_limit)

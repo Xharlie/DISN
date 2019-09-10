@@ -262,8 +262,8 @@ class Pt_sdf_img(threading.Thread):
 
                 x_shift_left = min(alpha_pixels[:,1])
                 x_shift_right = self.FLAGS.img_w - max(alpha_pixels[:,1])
-                y_shift = random.randrange(-y_shift_top, y_shift_down, 1)
-                x_shift = random.randrange(-x_shift_left, x_shift_right, 1)
+                y_shift = random.randrange(-y_shift_top * 0.7, y_shift_down * 0.7, 1)
+                x_shift = random.randrange(-x_shift_left * 0.7, x_shift_right * 0.7, 1)
                 # print(y_shift_top,y_shift_down,y_shift)
                 # print(x_shift_left,x_shift_right,x_shift)
                 img_new = np.zeros((self.FLAGS.img_h, self.FLAGS.img_w, 4), dtype=np.float32)

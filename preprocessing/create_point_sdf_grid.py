@@ -7,8 +7,15 @@ from joblib import Parallel, delayed
 import trimesh
 from scipy.interpolate import RegularGridInterpolator
 import time
+import argparse
 
 CUR_PATH = os.path.dirname(os.path.realpath(__file__))
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--thread_num', type=int, default='9', help='how many objs are creating at the same time')
+parser.add_argument('--category', type=str, default="all", help='Which single class to generate on [default: all, can '
+                                                                'be chair or plane, etc.]')
+FLAGS = parser.parse_args()
 
 def get_sdf_value(sdf_pt, sdf_params_ph, sdf_ph, sdf_res):
     x = np.linspace(sdf_params_ph[0], sdf_params_ph[3], num=sdf_res+1)
@@ -245,7 +252,7 @@ def create_one_cube_obj(marching_cube_command, i, sdf_file, cube_obj_file):
     return cube_obj_file
 
 def create_sdf(sdfcommand, marching_cube_command, LIB_command, num_sample,
-       bandwidth, res, expand_rate, all_cats, cats, raw_dirs, lst_dir, iso_val,
+       bandwidth, res, expand_rate, cats, raw_dirs, lst_dir, iso_val,
        max_verts, ish5= True, normalize=True, g=0.00, version=2, skip_all_exist=False):
     '''
     Usage: SDFGen <filename> <dx> <padding>
@@ -256,7 +263,7 @@ def create_sdf(sdfcommand, marching_cube_command, LIB_command, num_sample,
     '''
     print("command:", LIB_command)
     os.system(LIB_command)
-    sdf_dir=os.path.join(raw_dirs["sdf_dir"], str(res)+"_expr_"+str(expand_rate)+"_bw_"+str(bandwidth))
+    sdf_dir=raw_dirs["sdf_dir"]
     if not os.path.exists(sdf_dir): os.makedirs(sdf_dir)
     start=0
     for catnm in cats.keys():
@@ -289,7 +296,7 @@ def create_sdf(sdfcommand, marching_cube_command, LIB_command, num_sample,
         g_lst=[g for i in range(repeat)]
         version_lst=[version for i in range(repeat)]
         skip_all_exist_lst=[skip_all_exist for i in range(repeat)]
-        with Parallel(n_jobs=9) as parallel:
+        with Parallel(n_jobs=FLAGS.thread_num) as parallel:
             parallel(delayed(create_sdf_obj)
             (sdfcommand, marching_cube_command, cat_mesh_dir, cat_norm_mesh_dir, cat_sdf_dir, obj, res,
              iso_val, expand_rate, indx, ish5, norm, num_sample, bandwidth, max_verts,cat_id,g,version, skip_all_exist)
@@ -315,33 +322,38 @@ if __name__ == "__main__":
     # nohup python -u create_point_sdf_grid.py &> create_sdf.log &
 
     #  full set
-    lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info(version=1)
-    create_sdf("/home/xharlie/dev/isosurface/computeDistanceField",
-               "/home/xharlie/dev/isosurface/computeMarchingCubes",
-               "source /home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
-               256, 1.2, all_cats, cats, raw_dirs,
+    lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
+    if FLAGS.category != "all":
+        cats = {
+            FLAGS.category:cats[FLAGS.category]
+        }
+
+    create_sdf("./isosurface/computeDistanceField",
+               "./isosurface/computeMarchingCubes",
+               "source ./isosurface/LIB_PATH", 32768, 0.1,
+               256, 1.2, cats, raw_dirs,
                lst_dir, 0.003, 16384, ish5=True, normalize=True, g=0.00, version=1, skip_all_exist=True)
 
-    create_sdf("/home/xharlie/dev/isosurface/computeDistanceField",
-               "/home/xharlie/dev/isosurface/computeMarchingCubes",
-               "source /home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
-               256, 1.2, all_cats, cats, raw_dirs,
+    create_sdf("./isosurface/computeDistanceField",
+               "./isosurface/computeMarchingCubes",
+               "source ./home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
+               256, 1.2, cats, raw_dirs,
                lst_dir, 0.003, 16384, ish5=True, normalize=True, g=0.03, version=1, skip_all_exist=False)
 
-    create_sdf("/home/xharlie/dev/isosurface/computeDistanceField",
-               "/home/xharlie/dev/isosurface/computeMarchingCubes",
-               "source /home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
-               256, 1.2, all_cats, cats, raw_dirs,
+    create_sdf("./isosurface/computeDistanceField",
+               "./isosurface/computeMarchingCubes",
+               "source ./home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
+               256, 1.2, cats, raw_dirs,
                lst_dir, 0.003, 16384, ish5=True, normalize=True, g=0.05, version=1, skip_all_exist=False)
 
-    create_sdf("/home/xharlie/dev/isosurface/computeDistanceField",
-               "/home/xharlie/dev/isosurface/computeMarchingCubes",
-               "source /home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
-               256, 1.2, all_cats, cats, raw_dirs,
+    create_sdf("./isosurface/computeDistanceField",
+               "./isosurface/computeMarchingCubes",
+               "source ./home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
+               256, 1.2, cats, raw_dirs,
                lst_dir, 0.003, 16384, ish5=True, normalize=True, g=0.06, version=1, skip_all_exist=False)
 
-    create_sdf("/home/xharlie/dev/isosurface/computeDistanceField",
-               "/home/xharlie/dev/isosurface/computeMarchingCubes",
-               "source /home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
-               256, 1.2, all_cats, cats, raw_dirs,
+    create_sdf("./isosurface/computeDistanceField",
+               "./isosurface/computeMarchingCubes",
+               "source ./home/xharlie/dev/isosurface/LIB_PATH", 32768, 0.1,
+               256, 1.2, cats, raw_dirs,
                lst_dir, 0.003, 16384, ish5=True, normalize=True, g=0.00, version=1, skip_all_exist=False)

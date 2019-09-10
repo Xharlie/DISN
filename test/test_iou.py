@@ -9,14 +9,17 @@ import pymesh
 import os
 import sys
 from joblib import Parallel, delayed
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.append(BASE_DIR) # model
 sys.path.append(os.path.join(BASE_DIR, 'models'))
 sys.path.append(os.path.join(BASE_DIR, 'data'))
 sys.path.append(os.path.join(BASE_DIR, 'utils'))
 sys.path.append(os.path.join(BASE_DIR, 'preprocessing'))
 from tensorflow.contrib.framework.python.framework import checkpoint_utils
+import create_file_lst
+
 slim = tf.contrib.slim
+lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--store', action='store_true')
@@ -28,8 +31,7 @@ parser.add_argument('--decay_step', type=int, default=200000, help='Decay step f
 parser.add_argument('--decay_rate', type=float, default=0.9, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--num_classes', type=int, default=1024, help='vgg global embedding dimensions')
 parser.add_argument('--num_points', type=int, default=1, help='Point Number [default: 2048]')
-parser.add_argument('--mask_tp', type=str, default="neg_two_sides")
-parser.add_argument('--mask_rt', type=int, default=40000)
+parser.add_argument('--dim', type=int, default=110)
 parser.add_argument('--alpha', action='store_true')
 parser.add_argument('--rot', action='store_true')
 parser.add_argument('--tanh', action='store_true')
@@ -43,10 +45,9 @@ parser.add_argument('--cam_est', action='store_true')
 
 
 parser.add_argument('--log_dir', default='checkpoint/exp_200', help='Log dir [default: log]')
-parser.add_argument('--test_lst_dir', default='/ssd1/datasets/ShapeNet/filelists', help='test mesh data list')
+parser.add_argument('--test_lst_dir', default=lst_dir, help='test mesh data list')
 parser.add_argument('--threedcnn', action='store_true')
-parser.add_argument('--img_feat', action='store_true')
-parser.add_argument('--img_feat_far', action='store_true')
+parser.add_argument('--img_feat_onestream', action='store_true')
 parser.add_argument('--img_feat_twostream', action='store_true')
 parser.add_argument('--category', default="all", help='Which single class to train on [default: None]')
 parser.add_argument('--view_num', type=int, default=24, help="how many views do you want to create for each obj")
@@ -80,33 +81,22 @@ def log_string(out_str):
     LOG_FOUT.flush()
     print(out_str)
 
-if VV:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_full'}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1'}
-    else:
-        info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5',
-                'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_simp'}
+
+if FLAGS.threedcnn:
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs["3dnnsdf_dir"],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir_v2']}
+elif FLAGS.img_feat_onestream or FLAGS.img_feat_twostream:
+    info = {'rendered_dir': raw_dirs["renderedh5_dir"],
+            'sdf_dir': raw_dirs["sdf_dir"],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir']}
+    if FLAGS.cam_est:
+        info['rendered_dir']= raw_dirs["renderedh5_dir_est"]
 else:
-    if FLAGS.threedcnn:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_full/64_expr_1.2',
-                'gt_marching_cube': "/hdd_extra1/datasets/ShapeNet/march_cube_objs/"}
-    elif FLAGS.img_feat or FLAGS.img_feat_far or FLAGS.img_feat_twostream:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1',
-                'gt_marching_cube':"/ssd1/datasets/ShapeNet/march_cube_objs_v1"}
-        if FLAGS.cam_est:
-            info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred_3d',
-                    'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1',
-                    'gt_marching_cube': "/ssd1/datasets/ShapeNet/march_cube_objs_v1/"}
-    else:
-        info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v2',
-                'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_neg/simp_256_expr_1.2_bw_0.1',
-                'gt_marching_cube': "/hdd_extra1/datasets/ShapeNet/march_cube_objs"}
+    info = {'rendered_dir': raw_dirs["renderedh5_dir_v2"],
+            'sdf_dir': raw_dirs['sdf_dir_v2'],
+            'gt_marching_cube':raw_dirs['norm_mesh_dir_v2']}
+
 print(info)
 
 def load_model(sess, LOAD_MODEL_FILE, prefixs, strict=False):
@@ -215,7 +205,7 @@ def iou_cat(pred_dir, gt_dir, test_lst_f, dim=110):
             print("obj_id iou avg: ", avg_iou, " best pred: ", result_lst[ind])
     return iou_sum / count, best_iou_pred_lst
 
-def iou_pymesh(mesh_src, mesh_pred, dim=110):
+def iou_pymesh(mesh_src, mesh_pred, dim=FLAGS.dim):
     try:
         mesh1 = pymesh.load_mesh(mesh_src)
         grid1 = pymesh.VoxelGrid(2./dim)

@@ -17,16 +17,19 @@ print(os.path.join(os.path.dirname(BASE_DIR), 'data'))
 sys.path.append(BASE_DIR) # model
 sys.path.append(os.path.join(BASE_DIR, 'models'))
 sys.path.append(os.path.join(BASE_DIR, 'utils'))
+sys.path.append(os.path.join(BASE_DIR, 'preprocessing'))
 sys.path.append(os.path.join(os.path.dirname(BASE_DIR), 'data'))
 print(os.path.join(BASE_DIR, 'data'))
 import model_sdf_2d_proj_twostream_cam as model
 import data_sdf_h5_queue_mask_imgh5_cammat as data
+import create_file_lst
 
 slim = tf.contrib.slim
+lst_dir, cats, all_cats, raw_dirs = create_file_lst.get_all_info()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', type=str, default='2', help='GPU to use [default: GPU 0]')
-parser.add_argument('--category', default=None, help='Which single class to train on [default: None]')
+parser.add_argument('--category', default="all", help='Which single class to train on [default: None]')
 parser.add_argument('--log_dir', default='checkpoint/sdf_2d_twostream_cam_pcrot_all', help='Log dir [default: log]')
 parser.add_argument('--num_points', type=int, default=1, help='Point Number [default: 2048]')
 parser.add_argument('--num_sample_points', type=int, default=2048, help='Sample Point Number [default: 2048]')
@@ -51,7 +54,7 @@ parser.add_argument('--loss_mode', type=str, default="3D", help='loss on 3D poin
 parser.add_argument('--test', action="store_true")
 parser.add_argument('--create', action="store_true")
 parser.add_argument('--cat_limit', type=int, default=168000, help="balance each category, 1500 * 24 = 36000")
-parser.add_argument('--img_h5_dir', type=str, default="/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1_pred/", help="where to save img_h5")
+parser.add_argument('--img_h5_dir', type=str, default=raw_dirs["renderedh5_dir_est"], help="where to save img_h5")
 parser.add_argument('--shift', action="store_true")
 parser.add_argument('--shift_weight', type=float, default=0.5)
 
@@ -129,59 +132,35 @@ for value in CAT_LIST:
     cats_limit_test[value] = 0
 
 
-if VV:
-    for cat in CAT_LIST:
-        TRAIN_LST = '/media/ssd/projects/Deformation/Sources/DF/shapenet/filelists/%s_train.lst' % cat
-        with open(TRAIN_LST, 'r') as f:
-            lines = f.read().splitlines()
-            for line in lines:
-                for render in range(24):
-                    cats_limit_train[cat] += 1
-                    TRAIN_LISTINFO += [(cat, line.strip(), render)]
+for cat in CAT_LIST:
+    TRAIN_LST = lst_dir + '/%s_train.lst' % cat
+    with open(TRAIN_LST, 'r') as f:
+        lines = f.read().splitlines()
+        for line in lines:
+            for render in range(24):
+                cats_limit_train[cat] += 1
+                TRAIN_LISTINFO += [(cat, line.strip(), render)]
 
-    for cat in CAT_LIST:
-        VALID_LST = '/media/ssd/projects/Deformation/Sources/DF/shapenet/filelists/%s_test.lst' % cat
-        with open(VALID_LST, 'r') as f:
-            lines = f.read().splitlines()
-            for line in lines:
-                for render in range(24):
-                    cats_limit_test[cat] += 1
-                    TEST_LISTINFO += [(cat, line.strip(), render)]
-
-    info = {'rendered_dir': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRenderingh5_v1',
-            'rendered_dir_v2': '/media/ssd/projects/Deformation/ShapeNet/ShapeNetRendering',
-            'sdf_dir': '/media/ssd/projects/Deformation/ShapeNet/SDF_v1',
-            'iso_value': 0.003}
-else:
-    for cat in CAT_LIST:
-        TRAIN_LST = '/ssd1/datasets/ShapeNet/filelists/%s_train.lst' % cat
-        with open(TRAIN_LST, 'r') as f:
-            lines = f.read().splitlines()
-            for line in lines:
-                for render in range(24):
-                    cats_limit_train[cat] += 1
-                    TRAIN_LISTINFO += [(cat, line.strip(), render)]
-
-    for cat in CAT_LIST:
-        VALID_LST = '/ssd1/datasets/ShapeNet/filelists/%s_test.lst' % cat
-        with open(VALID_LST, 'r') as f:
-            lines = f.read().splitlines()
-            for line in lines:
-                for render in range(24):
-                    cats_limit_test[cat] += 1
-                    TEST_LISTINFO += [(cat, line.strip(), render)]
-    #
-    # cats_limit_test["03636649"] =2
-    # cats_limit_test["04090263"] =1
-    # TEST_LISTINFO = [("03636649", "7fa0f8d0da975ea0f323a65d99f15033", 8),
-    #                  ("03636649", "c372499c4fb0b707e262a7452d41c334", 5),
-    #                  ("04090263", "c02b44f51d159cc4a37c14b361202b90", 19)]
+for cat in CAT_LIST:
+    VALID_LST = lst_dir + '/%s_test.lst' % cat
+    with open(VALID_LST, 'r') as f:
+        lines = f.read().splitlines()
+        for line in lines:
+            for render in range(24):
+                cats_limit_test[cat] += 1
+                TEST_LISTINFO += [(cat, line.strip(), render)]
+#
+# cats_limit_test["03636649"] =2
+# cats_limit_test["04090263"] =1
+# TEST_LISTINFO = [("03636649", "7fa0f8d0da975ea0f323a65d99f15033", 8),
+#                  ("03636649", "c372499c4fb0b707e262a7452d41c334", 5),
+#                  ("04090263", "c02b44f51d159cc4a37c14b361202b90", 19)]
 
 
-    info = {'rendered_dir': '/ssd1/datasets/ShapeNet/ShapeNetRenderingh5_v1',
-            'rendered_dir_v2': '/ssd1/datasets/ShapeNet/ShapeNetRendering',
-            'sdf_dir': '/ssd1/datasets/ShapeNet/SDF_v1/256_expr_1.2_bw_0.1/',
-            'iso_value': 0.003}
+info = {'rendered_dir': raw_dirs['renderedh5_dir'],
+        'rendered_dir_v2': raw_dirs['renderedh5_dir_v2'],
+        'sdf_dir': raw_dirs['sdf_dir'],
+        'iso_value': 0.003}
 
 TRAIN_DATASET = data.Pt_sdf_img(FLAGS, listinfo=TRAIN_LISTINFO, info=info, cats_limit=cats_limit_train)
 VALID_DATASET = data.Pt_sdf_img(FLAGS, listinfo=TEST_LISTINFO, info=info, cats_limit=cats_limit_test)
