@@ -98,7 +98,7 @@ Please also cite it if you use our code to generate sdf files
   
 ## SDF generation network:
 
-*  train the sdf generation with provided camera parameters:
+* ### train the sdf generation with provided camera parameters:
 
   if train from scratch, you can load official pretrained vgg_16 by setting --restore_modelcnn; or you can  --restore_model to your checkpoint to continue the training):
 
@@ -110,10 +110,10 @@ Please also cite it if you use our code to generate sdf files
 
 * ### inference sdf and create mesh objects:
 
-  * #### will save objs in {your training checkpoint dir}/test_objs/{sdf_res+1}_{iso}
-  * #### will save objs in {your training checkpoint dir}/test_objs/{sdf_res+1}_{iso}
-  * #### if use estimated camera post, --cam_est, will save objs in {your training checkpoint dir}/test_objs/camest_{sdf_res+1}_{iso}
-  * #### if only create chair or a single category, --category {chair or a single category}
+  * will save objs in {your training checkpoint dir}/test_objs/{sdf_res+1}_{iso}
+  * will save objs in {your training checkpoint dir}/test_objs/{sdf_res+1}_{iso}
+  * if use estimated camera post, --cam_est, will save objs in {your training checkpoint dir}/test_objs/camest_{sdf_res+1}_{iso}
+  * if only create chair or a single category, --category {chair or a single category}
   ```
   source isosurface/LIB_PATH
 
@@ -137,14 +137,14 @@ Please also cite it if you use our code to generate sdf files
    nohup python -u test/test_cd_emd.py --img_feat_twostream --view_num 24 --num_sample_points 2048 --gpu 0 --batch_size 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all &> log/DISN_cd_emd_all.log & 
   ```
 * ### F-Score caluculation:
-  * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
+  * cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
   also the threshold of true can be set, here we use 2.5 for default:
   ```
    nohup python -u test/test_f_score.py --img_feat_twostream --view_num 24 --num_sample_points 2048 --gpu 0 --batch_size 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all --truethreshold 2.5 &> log/DISN_fscore_2.5.log & 
   ```
  * ### IOU caluculation:
-    * #### cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
-    * #### --dim specify the number of voxels along each 3D dimension.
+    * cal_dir specify which obj folder to be tested, e.g. if only test watercraft, --category watercraft
+    * --dim specify the number of voxels along each 3D dimension.
 
     ```
       nohup python -u test/test_iou.py --img_feat_twostream --view_num 24 --log_dir checkpoint/{your training checkpoint dir} --cal_dir checkpoint/{your training checkpoint dir}/test_objs/65_0.0 --category all --dim 110 &> DISN_iou_all.log &
