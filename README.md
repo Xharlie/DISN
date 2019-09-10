@@ -15,7 +15,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
 <img src="./result.png"  />
 
 
-Also our data preparation used this paper 'Vega: non-linear fem deformable object simulator'[http://run.usc.edu/vega/SinSchroederBarbic2012.pdf] 
+Also our data preparation used this paper [Vega: non-linear fem deformable object simulator](http://run.usc.edu/vega/SinSchroederBarbic2012.pdf)
 Please also cite it if you use our code to generate sdf files
 ``` 
 @inproceedings{sin2013vega,
@@ -52,7 +52,7 @@ Please also cite it if you use our code to generate sdf files
   unzip ShapeNetCore.v1.zip -d {your mesh_dir}
   ```
   
-* ### Generate sdf files and the reconstructed models from the sdf file 
+* ### Generate sdf files and the reconstructed models from the sdf file (Please expect the script to run for several hours.)
   ```
   mkdir log
   pip install trimesh==2.37.20
