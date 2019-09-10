@@ -32,8 +32,7 @@ Please also cite it if you use our code to generate sdf files
 ## Data Preparation
 
 * ### file location setup:
-  * #### under preprocessing/info.json, you can change the locations of your data: the neccessary dir for the main model
-  are : 
+  * under preprocessing/info.json, you can change the locations of your data: the neccessary dir for the main model are : 
    ```  
         "raw_dirs_v1": {
         "mesh_dir": "/ssd1/datasets/ShapeNet/ShapeNetCore.v1/",
@@ -102,8 +101,8 @@ Please also cite it if you use our code to generate sdf files
 
   if train from scratch, you can load official pretrained vgg_16 by setting --restore_modelcnn; or you can  --restore_model to your checkpoint to continue the training):
 
-  1. support flip the background color from black to white since most online images have white background(by using --backcolorwhite)
-  2. if use flag --cam_est, the img_h5 is loaded from {renderedh5_dir_est} instead of {renderedh5_dir}, so that we can train the generation on the estimated camera parameters
+  * support flip the background color from black to white since most online images have white background(by using --backcolorwhite)
+  * if use flag --cam_est, the img_h5 is loaded from {renderedh5_dir_est} instead of {renderedh5_dir}, so that we can train the generation on the estimated camera parameters
   ```
   nohup python -u train/train_sdf.py --gpu 0 --img_feat_twostream --restore_modelcnn ./models/CNN/pretrained_model/vgg_16.ckpt --log_dir checkpoint/{your training checkpoint dir} --category all --num_sample_points 2048 --batch_size 20 --learning_rate 0.0001 --cat_limit 36000 &> log/DISN_train_all.log &
   ```
