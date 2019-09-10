@@ -1,5 +1,5 @@
 # DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction
-Please cite our NeurIPS 2019 paper
+Please cite our paper
 [DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
 
 ``` 
