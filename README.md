@@ -9,6 +9,11 @@ Please cite our NeurIPS 2019 paper[https://arxiv.org/abs/1905.10711]
 }
 ``` 
 
+
+
+
+
+
 Also our data preparation used this paper 'Vega: non-linear fem deformable object simulator'[http://run.usc.edu/vega/SinSchroederBarbic2012.pdf] 
 Please also cite it if you use our code to generate sdf files
 ``` 
