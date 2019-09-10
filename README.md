@@ -11,8 +11,8 @@ Please cite our NeurIPS 2019 paper
 }
 ``` 
 Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http://www.lizhuwen.com/)
-**result**</br>
-<img src="./result.png" width = "350px" />
+
+<img src="./result.png"  />
 
 
 Also our data preparation used this paper 'Vega: non-linear fem deformable object simulator'[http://run.usc.edu/vega/SinSchroederBarbic2012.pdf] 
