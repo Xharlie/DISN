@@ -10,7 +10,7 @@ Please cite our NeurIPS 2019 paper
   year={2019}
 }
 ``` 
-Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http://www.lizhuwen.com/)
+Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
 
 <img src="./result.png"  />
 
