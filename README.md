@@ -1,4 +1,6 @@
-# DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction(will incorporate latest updates)
+# DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction  &nbsp;&nbsp;&nbsp; <img src="images/Adobe-Logos.png" width=120px /><img src="images/USC-Logos.png" width=120px />
+
+## (will incorporate latest updates)
 Please cite our paper
 [DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
 
@@ -12,7 +14,7 @@ Please cite our paper
 ``` 
 Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
 
-<img src="./result.png"  />
+<img src="images/result.png"  />
 
 ## Installation
   ```
