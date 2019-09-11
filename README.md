@@ -1,5 +1,5 @@
-# DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction
-<img src="images/Adobe-Logos.png" width=200px /> <img src="images/USC-Logos.png" width=200px />
+# DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction  &nbsp;&nbsp;&nbsp; <img src="images/Adobe-Logos.png" width=120px /><img src="images/USC-Logos.png" width=120px />
+
 ## (will incorporate latest updates)
 Please cite our paper
 [DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
