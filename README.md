@@ -18,17 +18,29 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
   ```
     pip install trimesh==2.37.20
     cd {DISN}
-        
+    mkdir checkpoint
+    get checkpoint
+    wget https://www.dropbox.com/s/2ts7qc9w4opl4w4/SDF_DISN.tar?dl=0
+    tar -xvzf SDF_DISN.tar?dl=0
+    rm -rf SDF_DISN.tar?dl=0
+    cd ..
+    mkdir cam_est/checkpoint
+    cd cam_est/checkpoint
+    wget https://www.dropbox.com/s/hyv4lcvpfu0au9e/cam_DISN.tar?dl=0
+    tar -xvzf cam_DISN.tar?dl=0
+    rm -rf cam_DISN.tar?dl=0
+    cd ../../
+    
   ```
-
 ## Demo:
  * --sdf_res control the resolution of the sampled sdf, default is 64, the larger, the more fine-grained, but slower.
   ```
     cd {DISN}
     source isosurface/LIB_PATH
     nohup python -u demo/demo.py --cam_est --log_dir checkpoint/SDF_DISN --cam_log_dir cam_est/checkpoint/cam_DISN --img_feat_twostream --sdf_res 256 &> log/create_sdf.log &
-  ```
-
+  ``` 
+  The result is demo/result.obj.
+  
 ## Data Preparation
 
 * ### file location setup:
