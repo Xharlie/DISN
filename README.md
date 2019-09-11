@@ -13,13 +13,20 @@ Please cite our paper
 Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
 
 <img src="./result.png"  />
-## Demo:
- * --sdf_res control the resolution of the sampled sdf, default is 64, the larger, the more fine-grained, but slower.
+
+## Installation
   ```
     pip install trimesh==2.37.20
     cd {DISN}
+        
+  ```
+
+## Demo:
+ * --sdf_res control the resolution of the sampled sdf, default is 64, the larger, the more fine-grained, but slower.
+  ```
+    cd {DISN}
     source isosurface/LIB_PATH
-    nohup python -u demo/demo.py --log_dir checkpoint/SDF_DISN --img_feat_twostream --sdf_res 256 &> log/create_sdf.log &
+    nohup python -u demo/demo.py --cam_est --log_dir checkpoint/SDF_DISN --cam_log_dir cam_est/checkpoint/cam_DISN --img_feat_twostream --sdf_res 256 &> log/create_sdf.log &
   ```
 
 ## Data Preparation
@@ -49,7 +56,6 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
     Our data preparation used this paper [Vega: non-linear fem deformable object simulator](http://run.usc.edu/vega/SinSchroederBarbic2012.pdf). Please also cite it if you use our code to generate sdf files
   ```
   mkdir log
-  pip install trimesh==2.37.20
   cd {DISN}
   source isosurface/LIB_PATH
   nohup python -u preprocessing/create_point_sdf_grid.py --thread_num {recommend 9} --category {default 'all', but can be single category like 'chair'} &> log/create_sdf.log &
