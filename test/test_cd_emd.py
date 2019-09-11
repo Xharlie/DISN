@@ -160,62 +160,6 @@ def cd_emd_all(cats, pred_dir, gt_dir, test_lst_dir):
         cd_emd_cat(cat_id, cat_nm, pred_dir_cat, gt_dir_cat, test_lst_f)
     print("done!")
 
-def save_all_cat_gt_pnt(cats, gt_dir, test_lst_dir):
-    for cat_nm, cat_id in cats.items():
-        gt_dir_cat = os.path.join(gt_dir, cat_id)
-        test_lst_f = os.path.join(test_lst_dir, cat_id+"_test.lst")
-        sample_save_gt_pnt(cat_id, cat_nm, gt_dir_cat, test_lst_f)
-    print("done!")
-
-def sample_save_gt_pnt(cat_id, cat_nm, gt_dir_cat, test_lst_f):
-    count = 0
-    with open(test_lst_f, "r") as f:
-        test_objs = f.readlines()
-        count += 1
-        for obj_id in test_objs:
-            obj_id = obj_id.rstrip('\r\n')
-            obj_path = os.path.join(gt_dir_cat, obj_id, "isosurf.obj")
-            # pred_path_lst = pred_dict[obj_id]
-            verts_batch = np.zeros((FLAGS.num_sample_points, 3), dtype=np.float32)
-            mesh1 = pymesh.load_mesh(obj_path)
-            if mesh1.vertices.shape[0] > 0:
-                choice = np.random.randint(mesh1.vertices.shape[0], size=FLAGS.num_sample_points)
-                verts_batch = mesh1.vertices[choice, ...]
-            savefn = os.path.join(gt_dir_cat, obj_id, "pnt_{}.txt".format(FLAGS.num_sample_points))
-            np.savetxt(savefn, verts_batch, delimiter=',')
-            print("saved gt pnt of {} at {}".format(obj_id, savefn))
-
-
-def save_all_cat_pred_pnt(cats, pred_dir, test_lst_dir):
-    for cat_nm, cat_id in cats.items():
-        pred_dir_cat = os.path.join(pred_dir, cat_id)
-        test_lst_f = os.path.join(test_lst_dir, cat_id+"_test.lst")
-        sample_save_pred_pnt(cat_id, cat_nm, pred_dir_cat, test_lst_f)
-    print("done!")
-
-def sample_save_pred_pnt(cat_id, cat_nm, pred_dir, test_lst_f):
-    pred_dict = build_file_dict(pred_dir)
-    with open(test_lst_f, "r") as f:
-        test_objs = f.readlines()
-        for obj_id in test_objs:
-            obj_id = obj_id.rstrip('\r\n')
-            pred_path_lst = pred_dict[obj_id]
-            verts_batch = np.zeros((FLAGS.view_num, FLAGS.num_sample_points, 3), dtype=np.float32)
-            for i in range(len(pred_path_lst)):
-                pred_mesh_fl = pred_path_lst[i]
-                mesh1 = pymesh.load_mesh(pred_mesh_fl)
-                if mesh1.vertices.shape[0] > 0:
-                    choice = np.random.randint(mesh1.vertices.shape[0], size=FLAGS.num_sample_points)
-                    verts_batch[i, ...] = mesh1.vertices[choice, ...]
-                savedir = os.path.join(os.path.dirname(pred_dir),"pnt_{}_{}".format(FLAGS.num_sample_points, cat_id))
-                os.makedirs(savedir,exist_ok=True)
-                view_id = pred_mesh_fl[-6:-4]
-                savefn = os.path.join(savedir, "pnt_{}_{}.txt".format(obj_id, view_id))
-                print(savefn)
-                np.savetxt(savefn, verts_batch[i, ...], delimiter=',')
-                print("saved gt pnt of {} at {}".format(obj_id, savefn))
-
-
 
 def cd_emd_cat(cat_id, cat_nm, pred_dir, gt_dir, test_lst_f):
     pred_dict = build_file_dict(pred_dir)
