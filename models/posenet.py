@@ -47,7 +47,7 @@ def compute_geodesic_distance_from_two_matrices(m1, m2):
     return theta
 
 #############
-def get_cam_mat(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
+def get_cam_mat_shift(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
 
     with tf.variable_scope("scale") as scope:   #
         scale = tf_util.fully_connected(globalfeat, 64, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
@@ -85,3 +85,40 @@ def get_cam_mat(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
     pred_rotation_mat = tf.matmul(pred_scale, pred_rotation_mat)
     pred_RT = tf.concat([pred_rotation_mat, pred_translation], axis = 1)
     return pred_rotation_mat, pred_translation, pred_RT, pred_xyshift
+
+
+#############
+def get_cam_mat(globalfeat, is_training, batch_size, bn, bn_decay, wd=None):
+
+    with tf.variable_scope("scale") as scope:   #
+        scale = tf_util.fully_connected(globalfeat, 64, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
+        scale = tf_util.fully_connected(scale, 32, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
+        scale = tf_util.fully_connected(scale, 1, bn=bn, is_training=is_training, scope='fc3', activation_fn=None, bn_decay=bn_decay)
+        pred_scale = tf.reshape(scale, [batch_size, 1, 1]) * tf.tile(tf.expand_dims(tf.eye(3), 0), [batch_size, 1, 1])
+
+    with tf.variable_scope("ortho6d") as scope:   #
+        rotation = tf_util.fully_connected(globalfeat, 512, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
+        rotation = tf_util.fully_connected(rotation, 256, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
+        rotation = tf_util.fully_connected(rotation, 6, bn=bn, is_training=is_training, scope='fc3', activation_fn=None, bn_decay=bn_decay)
+        pred_rotation = tf.reshape(rotation, [batch_size, 6])
+
+    with tf.variable_scope("translation") as scope:
+        translation = tf_util.fully_connected(globalfeat, 128, bn=bn, is_training=is_training, scope='fc1', bn_decay=bn_decay)
+        translation = tf_util.fully_connected(translation, 64, bn=bn, is_training=is_training, scope='fc2', bn_decay=bn_decay)
+        # w_trans_init =
+        weights = tf.get_variable('fc3/weights', [64, 3],
+                                  initializer=tf.truncated_normal_initializer(stddev=0.05, seed=1),
+                                  dtype=tf.float32)
+        biases = tf.get_variable('fc3/biases', [3],
+                                 initializer=tf.constant_initializer(0.0),
+                                 dtype=tf.float32)
+        translation = tf.matmul(translation, weights)
+        translation = tf.nn.bias_add(translation, biases)
+        pred_translation = tf.reshape(translation, [batch_size, 3])
+        pred_translation += tf.constant([-0.00193892, 0.00169222, 1.3949631], dtype=tf.float32)
+
+    pred_translation = tf.reshape(pred_translation, [batch_size, 1, 3])
+    pred_rotation_mat = compute_rotation_matrix_from_ortho6d(pred_rotation)
+    pred_rotation_mat = tf.matmul(pred_scale, pred_rotation_mat)
+    pred_RT = tf.concat([pred_rotation_mat, pred_translation], axis = 1)
+    return pred_rotation_mat, pred_translation, pred_RT

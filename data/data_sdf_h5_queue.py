@@ -163,13 +163,13 @@ class Pt_sdf_img(threading.Thread):
             if self.FLAGS.alpha:
                 img_arr = h5_f["img_arr"][:].astype(np.float32)
                 img_arr[:, :, :4] = img_arr[:,:,:4] / 255.
-                # img_arr[:, :, 3] = np.greater(img_arr[:,:,3], 0.0000001).astype(np.float32)
             else:
                 img_raw = h5_f["img_arr"][:]
                 img_arr = img_raw[:, :, :3]
-                r_aug = 60 * np.random.rand() - 30
-                g_aug = 60 * np.random.rand() - 30
-                b_aug = 60 * np.random.rand() - 30
+                if self.FLAGS.augcolorfore or self.FLAGS.augcolorback:
+                    r_aug = 60 * np.random.rand() - 30
+                    g_aug = 60 * np.random.rand() - 30
+                    b_aug = 60 * np.random.rand() - 30
                 if self.FLAGS.augcolorfore:
                     img_arr[img_raw[:, :, 3] != 0, 0] + r_aug
                     img_arr[img_raw[:, :, 3] != 0, 1] + g_aug
@@ -296,8 +296,6 @@ class Pt_sdf_img(threading.Thread):
         batch_data['norm_params'] = batch_norm_params
         batch_data['sdf_params'] = batch_sdf_params
         batch_data['img'] = batch_img
-        # batch_data['img_mat'] = batch_img_mat
-        # batch_data['img_pos'] = batch_img_pos
         batch_data['trans_mat'] = batch_trans_mat
         batch_data['cat_id'] = batch_cat_id
         batch_data['obj_nm'] = batch_obj_nm

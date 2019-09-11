@@ -20,7 +20,7 @@ sys.path.append(os.path.join(BASE_DIR, 'utils'))
 sys.path.append(os.path.join(BASE_DIR, 'preprocessing'))
 sys.path.append(os.path.join(os.path.dirname(BASE_DIR), 'data'))
 print(os.path.join(BASE_DIR, 'data'))
-import model_sdf_2d_proj_twostream_cam as model
+import model_cam as model
 import data_sdf_h5_queue_mask_imgh5_cammat as data
 import create_file_lst
 
@@ -149,12 +149,6 @@ for cat in CAT_LIST:
             for render in range(24):
                 cats_limit_test[cat] += 1
                 TEST_LISTINFO += [(cat, line.strip(), render)]
-#
-# cats_limit_test["03636649"] =2
-# cats_limit_test["04090263"] =1
-# TEST_LISTINFO = [("03636649", "7fa0f8d0da975ea0f323a65d99f15033", 8),
-#                  ("03636649", "c372499c4fb0b707e262a7452d41c334", 5),
-#                  ("04090263", "c02b44f51d159cc4a37c14b361202b90", 19)]
 
 
 info = {'rendered_dir': raw_dirs['renderedh5_dir'],
@@ -164,14 +158,6 @@ info = {'rendered_dir': raw_dirs['renderedh5_dir'],
 
 TRAIN_DATASET = data.Pt_sdf_img(FLAGS, listinfo=TRAIN_LISTINFO, info=info, cats_limit=cats_limit_train)
 VALID_DATASET = data.Pt_sdf_img(FLAGS, listinfo=TEST_LISTINFO, info=info, cats_limit=cats_limit_test)
-
-
-# VALID_DATASET = []
-# with open(VALID_LST, 'r') as f:
-#     lines = f.read().splitlines()
-#     for line in lines:
-#         for render in range(24):
-#             VALID_DATASET += [('03001627', line.strip(), '%02d' % render)]
 
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')

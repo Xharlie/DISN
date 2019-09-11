@@ -242,6 +242,7 @@ def test_one_epoch(sess, ops):
             batch_points = np.zeros((SPLIT_SIZE, 0, NUM_SAMPLE_POINTS, 3), dtype=np.float32)
             if not FLAGS.threedcnn:
                 for b in range(BATCH_SIZE):
+                    print(batch_data)
                     sdf_params = batch_data['sdf_params'][b]
                     x_ = np.linspace(sdf_params[0], sdf_params[3], num=RESOLUTION)
                     y_ = np.linspace(sdf_params[1], sdf_params[4], num=RESOLUTION)
@@ -310,7 +311,7 @@ def create_obj(pred_sdf_val, sdf_params, dir, cat_id, obj_nm, view_id, i):
     cube_obj_file = os.path.join(dir, obj_nm+"_"+view_id+".obj")
     sdf_file = os.path.join(dir, obj_nm+"_"+view_id+".dist")
     to_binary((RESOLUTION-1), sdf_params, pred_sdf_val, sdf_file)
-    create_one_cube_obj("/home/xharlie/dev/isosurface/computeMarchingCubes", i, sdf_file, cube_obj_file)
+    create_one_cube_obj("./isosurface/computeMarchingCubes", i, sdf_file, cube_obj_file)
     command_str = "rm -rf " + sdf_file
     print("command:", command_str)
     os.system(command_str)
