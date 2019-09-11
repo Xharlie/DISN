@@ -16,19 +16,22 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
 
 ## Installation
   ```
+    ## install tensorflow 1.10(should be able to run with 1.11, 1.12,1.13, but not 1.14 or 2.X)
     pip install trimesh==2.37.20
     cd {DISN}
     mkdir checkpoint
     get checkpoint
-    wget https://www.dropbox.com/s/2ts7qc9w4opl4w4/SDF_DISN.tar?dl=0
-    tar -xvzf SDF_DISN.tar?dl=0
-    rm -rf SDF_DISN.tar?dl=0
+    wget https://www.dropbox.com/s/2ts7qc9w4opl4w4/SDF_DISN.tar 
+    ### or download https://drive.google.com/file/d/1PEXVxXflVqWNqinSMC-hFmFdlMyoMZ7i/view?usp=sharing
+    tar -xvzf SDF_DISN.tar
+    rm -rf SDF_DISN.tar
     cd ..
     mkdir cam_est/checkpoint
     cd cam_est/checkpoint
-    wget https://www.dropbox.com/s/hyv4lcvpfu0au9e/cam_DISN.tar?dl=0
-    tar -xvzf cam_DISN.tar?dl=0
-    rm -rf cam_DISN.tar?dl=0
+    wget https://www.dropbox.com/s/hyv4lcvpfu0au9e/cam_DISN.tar
+    #### or download https://drive.google.com/file/d/1S5Gh_u1C9vDvksqXDn3CP6IqsnU0hKkj/view?usp=sharing
+    tar -xvzf cam_DISN.tar
+    rm -rf cam_DISN.tar
     cd ../../
     
   ```
