@@ -16,10 +16,16 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
 
 <img src="images/result.png"  />
 
+## System Requirements
+  * ### GPU: 1080Ti (Other models can consider decrease the batch size if overflow)
+  * ### system: Ubuntu 16.04 (if your linux version can support tensorflow 1.10, it's going to be ok)
+  * ### tensorflow 1.10(should be able to run with 1.11, 1.12,1.13, but not 1.14 or 2.X)
+```
+    pip install trimesh==2.37.20
+```
+
 ## Installation
   ```
-    ## install tensorflow 1.10(should be able to run with 1.11, 1.12,1.13, but not 1.14 or 2.X)
-    pip install trimesh==2.37.20
     cd {DISN}
     mkdir checkpoint
     get checkpoint
