@@ -28,7 +28,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
   ```
     cd {DISN}
     mkdir checkpoint
-    get checkpoint
+    cd checkpoint
     wget https://www.dropbox.com/s/2ts7qc9w4opl4w4/SDF_DISN.tar 
     ### or google drive: https://drive.google.com/file/d/1PEXVxXflVqWNqinSMC-hFmFdlMyoMZ7i/view?usp=sharing
     ### or baidu yunpan: https://pan.baidu.com/s/1Zujo84JoTcTW5dUl0AvS_w   extraction code: esy9
