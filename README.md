@@ -1,6 +1,8 @@
 # DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction  &nbsp;&nbsp;&nbsp; <img src="images/Adobe-Logos.png" width=120px /><img src="images/USC-Logos.png" width=120px />
 
 ## (will incorporate latest updates)
+* ### We just released a rendering [datasets](https://github.com/Xharlie/ShapenetRender_more_variation/blob/master) with more view variations 
+
 Please cite our paper
 [DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
 
@@ -15,6 +17,7 @@ Please cite our paper
 Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
 
 <img src="images/result.png"  />
+
 
 ## System Requirements
   * ### GPU: 1080Ti (Other models can consider decrease the batch size if overflow)
