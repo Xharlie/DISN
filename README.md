@@ -82,7 +82,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
   
 * ### Prepare the SDF ground truth and the marching cube reconstructed ground truth models 
 
-  Download our generated sdf tar.gz from [here](https://drive.google.com/open?id=1cHDickPLKLz3smQNpOGXD2W5mkXcy1nq) then place it at your "sdf_dir" in json; and the marching cube reconstructed ground truth models from the sdf file from [here](https://drive.google.com/open?id=1QGhDW335L7ra31uw5U-0V7hB-viA0JXr) then place it at your "norm_mesh_dir" in your json.
+  Download our generated sdf tar.gz from [here](https://drive.google.com/file/d/1cHDickPLKLz3smQNpOGXD2W5mkXcy1nq/view?usp=sharing) then place it at your "sdf_dir" in json; and the marching cube reconstructed ground truth models from the sdf file from [here](https://drive.google.com/drive/folders/1QGhDW335L7ra31uw5U-0V7hB-viA0JXr?usp=sharing) then place it at your "norm_mesh_dir" in your json.
 
   If you want to generate sdf files and the reconstructed models by yourself, please follow the command lines below (Please expect the script to run for several hours). This step used this paper [Vega: non-linear fem deformable object simulator](http://run.usc.edu/vega/SinSchroederBarbic2012.pdf). Please also cite it if you use our code to generate sdf files
   ```
