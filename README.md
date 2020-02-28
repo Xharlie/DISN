@@ -50,7 +50,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
     tar -xvzf cam_DISN.tar
     rm -rf cam_DISN.tar
     cd ../../
-    Change corresponding libary path in your system in isosurface/LIB_PATH
+    Install whatever libary you don't have and change corresponding libary path in your system in isosurface/LIB_PATH
   ```
 ## Demo:
  * --sdf_res control the resolution of the sampled sdf, default is 64, the larger, the more fine-grained, but slower.
