@@ -7,11 +7,15 @@ Please cite our paper
 [DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction (NeurIPS 2019)](https://arxiv.org/abs/1905.10711)
 
 ``` 
-@inProceedings{xu2019disn,
-  title={DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction},
-  author={Xu, Qiangeng and Wang, Weiyue and Ceylan, Duygu and Mech, Radomir and Neumann, Ulrich},
-  booktitle={NeurIPS},
-  year={2019}
+@incollection{NIPS2019_8340,
+title = {DISN: Deep Implicit Surface Network for High-quality Single-view 3D Reconstruction},
+author = {Xu, Qiangeng and Wang, Weiyue and Ceylan, Duygu and Mech, Radomir and Neumann, Ulrich},
+booktitle = {Advances in Neural Information Processing Systems 32},
+editor = {H. Wallach and H. Larochelle and A. Beygelzimer and F. d\textquotesingle Alch\'{e}-Buc and E. Fox and R. Garnett},
+pages = {492--502},
+year = {2019},
+publisher = {Curran Associates, Inc.},
+url = {http://papers.nips.cc/paper/8340-disn-deep-implicit-surface-network-for-high-quality-single-view-3d-reconstruction.pdf}
 }
 ``` 
 Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
@@ -22,7 +26,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
 ## System Requirements
   * ### GPU: 1080Ti (Other models can consider decrease the batch size if overflow)
   * ### system: Ubuntu 16.04 (if your linux version can support tensorflow 1.10, it's going to be ok)
-  * ### tensorflow 1.10(should be able to run with 1.11, 1.12,1.13, but not 1.14 or 2.X)
+  * ### tensorflow 1.10(should be able to run with 1.11, 1.12,1.13)
 ```
     pip install trimesh==2.37.20
 ```
@@ -46,7 +50,7 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
     tar -xvzf cam_DISN.tar
     rm -rf cam_DISN.tar
     cd ../../
-    Change corresponding libary path in your system in isosurface/LIB_PATH
+    Install whatever libary(e.g. mkl, tbb) you don't have and change corresponding libary path in your system in isosurface/LIB_PATH
   ```
 ## Demo:
  * --sdf_res control the resolution of the sampled sdf, default is 64, the larger, the more fine-grained, but slower.
@@ -56,7 +60,8 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
     nohup python -u demo/demo.py --cam_est --log_dir checkpoint/SDF_DISN --cam_log_dir cam_est/checkpoint/cam_DISN --img_feat_twostream --sdf_res 256 &> log/create_sdf.log &
   ``` 
   The result is demo/result.obj.
-  
+  if you have dependency problems such as your tbb lib, etc. Please install the corresponding dependencies and change the path in LIB_PATH. Everyone has his/her/their own environment setting so it's impossible to instruct this step without sitting besides you and your server.
+ 
 ## Data Preparation
 
 * ### file location setup:
@@ -80,8 +85,11 @@ Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](http
   unzip ShapeNetCore.v1.zip -d {your mesh_dir}
   ```
   
-* ### Generate sdf files and the reconstructed models from the sdf file (Please expect the script to run for several hours)
-    Our data preparation used this paper [Vega: non-linear fem deformable object simulator](http://run.usc.edu/vega/SinSchroederBarbic2012.pdf). Please also cite it if you use our code to generate sdf files
+* ### Prepare the SDF ground truth and the marching cube reconstructed ground truth models 
+
+  Download our generated sdf tar.gz from [here](https://drive.google.com/file/d/1cHDickPLKLz3smQNpOGXD2W5mkXcy1nq/view?usp=sharing) then place it at your "sdf_dir" in json; and the marching cube reconstructed ground truth models from the sdf file from [here](https://drive.google.com/drive/folders/1QGhDW335L7ra31uw5U-0V7hB-viA0JXr?usp=sharing) then place it at your "norm_mesh_dir" in your json.
+
+  If you want to generate sdf files and the reconstructed models by yourself, please follow the command lines below (Please expect the script to run for several hours). This step used this paper [Vega: non-linear fem deformable object simulator](http://run.usc.edu/vega/SinSchroederBarbic2012.pdf). Please also cite it if you use our code to generate sdf files
   ```
   mkdir log
   cd {DISN}
