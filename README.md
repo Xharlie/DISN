@@ -18,7 +18,7 @@ publisher = {Curran Associates, Inc.},
 url = {http://papers.nips.cc/paper/8340-disn-deep-implicit-surface-network-for-high-quality-single-view-3d-reconstruction.pdf}
 }
 ``` 
-Code contact: [Qiangeng Xu*](https://xharlie.github.io/) and [Weiyue Wang*](https://weiyuewang.github.io/)
+Primary contact: [Qiangeng Xu*](https://xharlie.github.io/)
 
 <img src="images/result.png"  />
 
